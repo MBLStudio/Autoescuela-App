@@ -245,6 +245,20 @@ export default function StudentPage() {
       }).catch(() => {})
     }
 
+    // Notificar a otros alumnos del hueco liberado
+    fetch('/api/notify-slot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cancelledStudentId: student!.id,
+        instructorId: student!.instructor_id,
+        practiceDate: booking.practice_date,
+        startTime: booking.start_time,
+        practiceType: booking.practice_type,
+        practiceSubtype: booking.practice_subtype,
+      }),
+    }).catch(() => {})
+
     setCancellingId(null)
     await Promise.all([fetchMyBookings(student!.id), fetchTakenSlots(student!.instructor_id)])
     setCancelling(false)
