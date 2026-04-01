@@ -8,6 +8,12 @@ import type { Student, Booking, PracticeType, PracticeSubtype, Exam } from '@/ty
 
 const SLOT_DURATION = 45
 const MIN_ADVANCE_HOURS = 24
+const MAX_BOOKING_DAYS = 7
+
+const PICKUP_LOCATIONS = [
+  'Estación de autobuses · Jardinillos',
+  'Av. Ramón Carande · frente al Bar Roma',
+]
 
 function getNextWorkingDays(count: number): Date[] {
   const days: Date[] = []
@@ -56,6 +62,7 @@ export default function StudentPage() {
   const [selectedSubtype, setSelectedSubtype] = useState<PracticeSubtype | null>(null)
   const [selectedDate, setSelectedDate] = useState<string>('')
   const [selectedSlot, setSelectedSlot] = useState<string>('')
+  const [selectedLocation, setSelectedLocation] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
@@ -64,7 +71,7 @@ export default function StudentPage() {
   const [cancelling, setCancelling] = useState(false)
   const [cancelError, setCancelError] = useState('')
 
-  const workingDays = getNextWorkingDays(21)
+  const workingDays = getNextWorkingDays(MAX_BOOKING_DAYS)
 
   useEffect(() => { loadStudent() }, [token])
 
@@ -200,16 +207,17 @@ export default function StudentPage() {
     setSubmitting(true)
     setSubmitError('')
 
-    const { data: existing } = await supabase
+    // Comprobar que no tenga ya reserva ese mismo día
+    const { data: sameDay } = await supabase
       .from('bookings')
       .select('id')
       .eq('student_id', student.id)
       .eq('status', 'confirmed')
-      .gte('practice_date', toDateString(new Date()))
+      .eq('practice_date', selectedDate)
       .single()
 
-    if (existing) {
-      setSubmitError('Ya tienes una práctica reservada. Cancélala antes de hacer una nueva.')
+    if (sameDay) {
+      setSubmitError('Ya tienes una práctica reservada ese día.')
       setSubmitting(false)
       return
     }
@@ -226,6 +234,7 @@ export default function StudentPage() {
       end_time: endTime,
       practice_type: selectedType,
       practice_subtype: selectedSubtype,
+      pickup_location: selectedLocation || null,
       status: 'confirmed',
     })
 
@@ -276,6 +285,7 @@ export default function StudentPage() {
     setSelectedDate('')
     setSelectedSlot('')
     setSelectedSubtype(null)
+    setSelectedLocation('')
     setSubmitError('')
   }
 
@@ -381,6 +391,11 @@ export default function StudentPage() {
                         <p className="text-xs mt-0.5" style={{ color: '#3a5070' }}>
                           {formatTime(booking.start_time)} – {formatTime(booking.end_time)} · {getPracticeLabel(booking.practice_type, booking.practice_subtype)}
                         </p>
+                        {booking.pickup_location && (
+                          <p className="text-xs mt-0.5" style={{ color: '#3a5070' }}>
+                            📍 {booking.pickup_location}
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {!isConfirming && (
@@ -875,6 +890,27 @@ export default function StudentPage() {
                 ))}
               </div>
 
+              {/* Lugar de recogida */}
+              <div>
+                <p className="text-xs font-semibold mb-2" style={{ color: '#6b8ab0' }}>Lugar de recogida</p>
+                <div className="space-y-2">
+                  {PICKUP_LOCATIONS.map(loc => (
+                    <button
+                      key={loc}
+                      onClick={() => setSelectedLocation(loc)}
+                      className="w-full px-4 py-3 rounded-xl text-sm font-semibold text-left transition-all duration-150"
+                      style={{
+                        background: selectedLocation === loc ? '#0057B820' : '#0a1220',
+                        border: `1.5px solid ${selectedLocation === loc ? '#0057B8' : '#1a2d45'}`,
+                        color: selectedLocation === loc ? '#5a9fe0' : '#6b8ab0',
+                      }}
+                    >
+                      📍 {loc}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {submitError && (
                 <div
                   className="rounded-xl px-4 py-3 text-sm"
@@ -886,11 +922,11 @@ export default function StudentPage() {
 
               <button
                 onClick={confirmBooking}
-                disabled={submitting}
+                disabled={submitting || !selectedLocation}
                 className="w-full py-3 rounded-xl text-sm font-bold text-white transition"
-                style={{ background: submitting ? '#1a2d45' : '#0057B8', color: submitting ? '#3a5070' : 'white' }}
-                onMouseEnter={e => { if (!submitting) (e.currentTarget as HTMLElement).style.background = '#004494' }}
-                onMouseLeave={e => { if (!submitting) (e.currentTarget as HTMLElement).style.background = '#0057B8' }}
+                style={{ background: submitting || !selectedLocation ? '#1a2d45' : '#0057B8', color: submitting || !selectedLocation ? '#3a5070' : 'white' }}
+                onMouseEnter={e => { if (!submitting && selectedLocation) (e.currentTarget as HTMLElement).style.background = '#004494' }}
+                onMouseLeave={e => { if (!submitting && selectedLocation) (e.currentTarget as HTMLElement).style.background = '#0057B8' }}
               >
                 {submitting ? 'Confirmando...' : '✓ Confirmar práctica'}
               </button>

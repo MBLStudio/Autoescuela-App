@@ -43,6 +43,7 @@ export interface Booking {
   confirmed_by_student: boolean
   no_show: boolean
   notes: string | null
+  pickup_location: string | null
   calendar_event_id: string | null
   created_at: string
   student?: Student
