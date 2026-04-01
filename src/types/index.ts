@@ -26,6 +26,8 @@ export interface Student {
   login_pin: string | null
   is_active: boolean
   max_concurrent_bookings: number
+  max_weekly_bookings: number
+  max_daily_bookings: number
   alert_days_inactive: number
   created_at: string
 }

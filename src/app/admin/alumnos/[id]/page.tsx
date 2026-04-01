@@ -24,6 +24,10 @@ export default function AlumnoPerfilPage() {
   const [email, setEmail] = useState('')
   const [savingEmail, setSavingEmail] = useState(false)
   const [savingTypes, setSavingTypes] = useState(false)
+  const [editLimits, setEditLimits] = useState(false)
+  const [maxWeekly, setMaxWeekly] = useState(5)
+  const [maxDaily, setMaxDaily] = useState(1)
+  const [savingLimits, setSavingLimits] = useState(false)
 
   useEffect(() => { fetchData() }, [id])
 
@@ -37,6 +41,8 @@ export default function AlumnoPerfilPage() {
     setStudent(studentData)
     setPhone(studentData.phone ?? '')
     setEmail(studentData.email ?? '')
+    setMaxWeekly(studentData.max_weekly_bookings ?? 5)
+    setMaxDaily(studentData.max_daily_bookings ?? 1)
     if (bookingsData) setBookings(bookingsData)
     setLoading(false)
   }
@@ -55,6 +61,15 @@ export default function AlumnoPerfilPage() {
     setStudent(prev => prev ? { ...prev, phone: phone.trim() || null } : prev)
     setSavingPhone(false)
     setEditPhone(false)
+  }
+
+  async function saveLimits() {
+    if (!student) return
+    setSavingLimits(true)
+    await supabase.from('students').update({ max_weekly_bookings: maxWeekly, max_daily_bookings: maxDaily }).eq('id', id)
+    setStudent(prev => prev ? { ...prev, max_weekly_bookings: maxWeekly, max_daily_bookings: maxDaily } : prev)
+    setSavingLimits(false)
+    setEditLimits(false)
   }
 
   async function togglePracticeType(type: 'car' | 'truck') {
@@ -304,6 +319,53 @@ export default function AlumnoPerfilPage() {
               <p className="text-sm font-bold break-all" style={{ color: student.email ? 'white' : '#3a5070' }}>
                 {student.email ?? 'Sin email'}
               </p>
+            )}
+          </div>
+
+          {/* Límites de reserva */}
+          <div className="rounded-2xl p-5" style={{ background: '#0d1829', border: '1px solid #1a2d45' }}>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#0057B8' }}>Límites de reserva</p>
+              {!editLimits && (
+                <button onClick={() => setEditLimits(true)} className="text-xs font-semibold transition" style={{ color: '#3a5070' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = 'white'}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#3a5070'}>
+                  Editar
+                </button>
+              )}
+            </div>
+            {editLimits ? (
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs font-semibold mb-1" style={{ color: '#3a5070' }}>Máx. por semana</p>
+                  <input type="number" min={1} max={20} value={maxWeekly} onChange={e => setMaxWeekly(Number(e.target.value))}
+                    className="w-full rounded-xl px-3 py-2 text-white text-sm outline-none"
+                    style={{ background: '#0a1220', border: '1.5px solid #0057B8' }} />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold mb-1" style={{ color: '#3a5070' }}>Máx. por día</p>
+                  <input type="number" min={1} max={5} value={maxDaily} onChange={e => setMaxDaily(Number(e.target.value))}
+                    className="w-full rounded-xl px-3 py-2 text-white text-sm outline-none"
+                    style={{ background: '#0a1220', border: '1.5px solid #0057B8' }} />
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => setEditLimits(false)} className="flex-1 py-2 rounded-lg text-xs font-bold"
+                    style={{ background: '#0a1220', color: '#6b8ab0', border: '1px solid #1a2d45' }}>Cancelar</button>
+                  <button onClick={saveLimits} disabled={savingLimits} className="flex-1 py-2 rounded-lg text-xs font-bold text-white"
+                    style={{ background: '#0057B8' }}>{savingLimits ? 'Guardando...' : 'Guardar'}</button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span style={{ color: '#6b8ab0' }}>Por semana</span>
+                  <span className="font-bold text-white">{student.max_weekly_bookings ?? 5} prácticas</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span style={{ color: '#6b8ab0' }}>Por día</span>
+                  <span className="font-bold text-white">{student.max_daily_bookings ?? 1} práctica</span>
+                </div>
+              </div>
             )}
           </div>
 

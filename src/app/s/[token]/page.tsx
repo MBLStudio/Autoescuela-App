@@ -38,6 +38,14 @@ function isSlotTooSoon(dateStr: string, timeStr: string): boolean {
   return hoursUntil(dateStr, timeStr) < MIN_ADVANCE_HOURS
 }
 
+function getWeekBounds(dateStr: string): { from: string; to: string } {
+  const d = new Date(dateStr + 'T00:00:00')
+  const day = d.getDay() === 0 ? 6 : d.getDay() - 1 // lunes=0
+  const mon = new Date(d); mon.setDate(d.getDate() - day)
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6)
+  return { from: toDateString(mon), to: toDateString(sun) }
+}
+
 type Step = 'type' | 'date' | 'time' | 'confirm' | 'success'
 
 const STEP_ORDER: Step[] = ['type', 'date', 'time', 'confirm']
@@ -249,6 +257,23 @@ export default function StudentPage() {
 
     if (sameDay) {
       setSubmitError('Ya tienes una práctica reservada ese día.')
+      setSubmitting(false)
+      return
+    }
+
+    // Comprobar límite semanal
+    const { from: weekFrom, to: weekTo } = getWeekBounds(selectedDate)
+    const { data: weekBookings } = await supabase
+      .from('bookings')
+      .select('id')
+      .eq('student_id', student.id)
+      .eq('status', 'confirmed')
+      .gte('practice_date', weekFrom)
+      .lte('practice_date', weekTo)
+
+    const maxWeekly = student.max_weekly_bookings ?? 5
+    if (weekBookings && weekBookings.length >= maxWeekly) {
+      setSubmitError(`Has alcanzado el límite de ${maxWeekly} prácticas esta semana.`)
       setSubmitting(false)
       return
     }
@@ -786,12 +811,16 @@ export default function StudentPage() {
                   const slots = getSlotsForDay(dateStr, selectedType, selectedSubtype)
                   const available = slots.filter(s => !s.taken).length
                   const isSelected = dateStr === selectedDate
+                  const { from: wFrom, to: wTo } = getWeekBounds(dateStr)
+                  const weekCount = myBookings.filter(b => b.practice_date >= wFrom && b.practice_date <= wTo).length
+                  const maxWeekly = student?.max_weekly_bookings ?? 5
+                  const weekFull = weekCount >= maxWeekly
 
                   return (
                     <button
                       key={dateStr}
-                      onClick={() => { setSelectedDate(dateStr); setStep('time') }}
-                      disabled={available === 0}
+                      onClick={() => { if (!weekFull) { setSelectedDate(dateStr); setStep('time') } }}
+                      disabled={available === 0 || weekFull}
                       className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm transition-all duration-150"
                       style={{
                         background: isSelected ? '#0057B820' : '#0a1220',
@@ -807,11 +836,11 @@ export default function StudentPage() {
                       <span
                         className="text-xs font-semibold px-2.5 py-1 rounded-full"
                         style={{
-                          background: available === 0 ? '#0f1c2e' : '#0057B820',
-                          color: available === 0 ? '#3a5070' : '#0057B8',
+                          background: weekFull ? 'rgba(251,191,36,0.1)' : available === 0 ? '#0f1c2e' : '#0057B820',
+                          color: weekFull ? '#fbbf24' : available === 0 ? '#3a5070' : '#0057B8',
                         }}
                       >
-                        {available === 0 ? 'Completo' : `${available} huecos`}
+                        {weekFull ? 'Sem. completa' : available === 0 ? 'Completo' : `${available} huecos`}
                       </span>
                     </button>
                   )
