@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate, formatTime, getDayName, toDateString, getPracticeLabel, generateTimeSlots, getDuration, getBreak } from '@/lib/utils'
-import type { Student, Booking, PracticeType, PracticeSubtype, Exam } from '@/types'
+import type { Student, Booking, PracticeType, PracticeSubtype, Exam, Instructor } from '@/types'
 
 const MIN_ADVANCE_HOURS = 24
 const MAX_BOOKING_DAYS = 7
@@ -56,6 +56,7 @@ export default function StudentPage() {
   const supabase = createClient()
 
   const [student, setStudent] = useState<Student | null>(null)
+  const [instructor, setInstructor] = useState<Instructor | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [loading, setLoading] = useState(true)
   const [myBookings, setMyBookings] = useState<Booking[]>([])
@@ -96,8 +97,13 @@ export default function StudentPage() {
 
     setStudent(data)
     setSelectedType(data.practice_types[0])
-    await Promise.all([fetchMyBookings(data.id), fetchTakenSlots(data.instructor_id), fetchAllBookings(data.id), fetchExams(data.id), fetchBlockedSlots(data.instructor_id)])
+    await Promise.all([fetchMyBookings(data.id), fetchTakenSlots(data.instructor_id), fetchAllBookings(data.id), fetchExams(data.id), fetchBlockedSlots(data.instructor_id), fetchInstructor(data.instructor_id)])
     setLoading(false)
+  }
+
+  async function fetchInstructor(instructorId: string) {
+    const { data } = await supabase.from('instructors').select('*').eq('id', instructorId).single()
+    if (data) setInstructor(data)
   }
 
   async function fetchMyBookings(studentId: string) {
@@ -196,8 +202,16 @@ export default function StudentPage() {
     return overlapsBooking || overlapsBlock
   }
 
+  function getInstructorSessions(): { start: string; end: string }[] {
+    if (!instructor) return [{ start: '08:00', end: '13:30' }, { start: '16:00', end: '19:15' }]
+    const sessions: { start: string; end: string }[] = []
+    if (instructor.schedule_morning) sessions.push({ start: instructor.morning_start.substring(0, 5), end: instructor.morning_end.substring(0, 5) })
+    if (instructor.schedule_afternoon) sessions.push({ start: instructor.afternoon_start.substring(0, 5), end: instructor.afternoon_end.substring(0, 5) })
+    return sessions.length > 0 ? sessions : [{ start: '08:00', end: '13:30' }]
+  }
+
   function getSlotsForDay(date: string, type: PracticeType, subtype: PracticeSubtype | null) {
-    return generateTimeSlots(type, subtype).map(slot => ({
+    return generateTimeSlots(type, subtype, getInstructorSessions()).map(slot => ({
       time: slot,
       taken: isSlotBlocked(date, slot, type, subtype) || isSlotTooSoon(date, slot),
     }))

@@ -9,6 +9,12 @@ export interface Instructor {
   id: string
   email: string
   name: string
+  schedule_morning: boolean
+  schedule_afternoon: boolean
+  morning_start: string
+  morning_end: string
+  afternoon_start: string
+  afternoon_end: string
   created_at: string
 }
 

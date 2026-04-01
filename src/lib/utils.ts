@@ -70,13 +70,14 @@ export function getBreak(type: 'car' | 'truck' | 'moto', subtype?: 'pista' | 'ci
 // ── Genera los slots de un día según tipo y subtipo de práctica ───────────────
 export function generateTimeSlots(
   practiceType: 'car' | 'truck' | 'moto',
-  practiceSubtype?: 'pista' | 'circulacion' | null
+  practiceSubtype?: 'pista' | 'circulacion' | null,
+  customSessions?: { start: string; end: string }[]
 ): string[] {
   const slots: string[] = []
   const duration = getDuration(practiceType, practiceSubtype)
   const breakTime = getBreak(practiceType, practiceSubtype)
 
-  const sessions = [
+  const sessions = customSessions ?? [
     { start: '08:00', end: '13:30' },
     { start: '16:00', end: '19:15' },
   ]
