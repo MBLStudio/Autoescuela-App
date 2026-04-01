@@ -53,6 +53,7 @@ export default function StudentPage() {
   const [loading, setLoading] = useState(true)
   const [myBookings, setMyBookings] = useState<Booking[]>([])
   const [takenSlots, setTakenSlots] = useState<{ date: string; start: string; type: PracticeType; subtype: PracticeSubtype | null }[]>([])
+  const [blockedSlots, setBlockedSlots] = useState<{ date: string; start: string; end: string }[]>([])
 
   const [allBookings, setAllBookings] = useState<Booking[]>([])
   const [exams, setExams] = useState<Exam[]>([])
@@ -88,7 +89,7 @@ export default function StudentPage() {
 
     setStudent(data)
     setSelectedType(data.practice_types[0])
-    await Promise.all([fetchMyBookings(data.id), fetchTakenSlots(data.instructor_id), fetchAllBookings(data.id), fetchExams(data.id)])
+    await Promise.all([fetchMyBookings(data.id), fetchTakenSlots(data.instructor_id), fetchAllBookings(data.id), fetchExams(data.id), fetchBlockedSlots(data.instructor_id)])
     setLoading(false)
   }
 
@@ -142,6 +143,24 @@ export default function StudentPage() {
     }
   }
 
+  async function fetchBlockedSlots(instructorId: string) {
+    const from = toDateString(workingDays[0])
+    const to = toDateString(workingDays[workingDays.length - 1])
+    const { data } = await supabase
+      .from('blocked_slots')
+      .select('date, start_time, end_time')
+      .eq('instructor_id', instructorId)
+      .gte('date', from)
+      .lte('date', to)
+    if (data) {
+      setBlockedSlots(data.map(b => ({
+        date: b.date,
+        start: b.start_time.substring(0, 5),
+        end: b.end_time.substring(0, 5),
+      })))
+    }
+  }
+
   function toMins(t: string): number {
     const [h, m] = t.split(':').map(Number)
     return h * 60 + m
@@ -154,12 +173,24 @@ export default function StudentPage() {
   function isSlotBlocked(date: string, slotStart: string, slotType: PracticeType, slotSubtype: PracticeSubtype | null): boolean {
     const sStart = toMins(slotStart)
     const sEnd = sStart + SLOT_DURATION + breakFor(slotType, slotSubtype)
-    return takenSlots.some(t => {
+
+    // Comprobar overlap con otras reservas
+    const overlapsBooking = takenSlots.some(t => {
       if (t.date !== date) return false
       const bStart = toMins(t.start)
       const bEnd = bStart + SLOT_DURATION + breakFor(t.type, t.subtype)
       return bStart < sEnd && sStart < bEnd
     })
+
+    // Comprobar overlap con horas bloqueadas por el profesor
+    const overlapsBlock = blockedSlots.some(b => {
+      if (b.date !== date) return false
+      const bStart = toMins(b.start)
+      const bEnd = toMins(b.end)
+      return bStart < sEnd && sStart < bEnd
+    })
+
+    return overlapsBooking || overlapsBlock
   }
 
   function getSlotsForDay(date: string, type: PracticeType, subtype: PracticeSubtype | null) {

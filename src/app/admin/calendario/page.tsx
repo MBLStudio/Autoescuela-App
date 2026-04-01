@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatTime, toDateString, getDayName, formatDate, getPracticeLabel, generateTimeSlots } from '@/lib/utils'
-import type { Booking, PracticeType, PracticeSubtype } from '@/types'
+import type { Booking, PracticeType, PracticeSubtype, BlockedSlot } from '@/types'
 
 const DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
@@ -27,8 +27,16 @@ export default function CalendarioPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [bookings, setBookings] = useState<Booking[]>([])
   const [blockedDays, setBlockedDays] = useState<string[]>([])
+  const [blockedSlots, setBlockedSlots] = useState<BlockedSlot[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'car' | 'truck'>('all')
+
+  // Estado para añadir bloqueo de horas
+  const [showBlockForm, setShowBlockForm] = useState(false)
+  const [blockStart, setBlockStart] = useState('')
+  const [blockEnd, setBlockEnd] = useState('')
+  const [blockReason, setBlockReason] = useState('')
+  const [savingBlock, setSavingBlock] = useState(false)
 
   useEffect(() => { fetchData() }, [currentMonth, currentYear])
 
@@ -38,7 +46,7 @@ export default function CalendarioPage() {
     const lastDay = getDaysInMonth(currentYear, currentMonth)
     const to = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
-    const [{ data: bookingsData }, { data: blockedData }] = await Promise.all([
+    const [{ data: bookingsData }, { data: blockedData }, { data: blockedSlotsData }] = await Promise.all([
       supabase
         .from('bookings')
         .select('*, student:students(full_name, order_number)')
@@ -51,10 +59,17 @@ export default function CalendarioPage() {
         .select('date')
         .gte('date', from)
         .lte('date', to),
+      supabase
+        .from('blocked_slots')
+        .select('*')
+        .gte('date', from)
+        .lte('date', to)
+        .order('start_time', { ascending: true }),
     ])
 
     if (bookingsData) setBookings(bookingsData)
     if (blockedData) setBlockedDays(blockedData.map(b => b.date))
+    if (blockedSlotsData) setBlockedSlots(blockedSlotsData)
     setLoading(false)
   }
 
@@ -77,6 +92,35 @@ export default function CalendarioPage() {
     if (filter === 'car') return carFree
     if (filter === 'truck') return [...pistafree, ...circFree].sort((a, b) => a.time.localeCompare(b.time))
     return [...carFree, ...pistafree, ...circFree].sort((a, b) => a.time.localeCompare(b.time))
+  }
+
+  async function saveBlockedSlot() {
+    if (!selectedDate || !blockStart || !blockEnd) return
+    if (blockStart >= blockEnd) return
+    setSavingBlock(true)
+
+    const { data: instructor } = await supabase.from('instructors').select('id').single()
+    if (!instructor) { setSavingBlock(false); return }
+
+    const { data: newSlot } = await supabase.from('blocked_slots').insert({
+      instructor_id: instructor.id,
+      date: selectedDate,
+      start_time: blockStart,
+      end_time: blockEnd,
+      reason: blockReason.trim() || null,
+    }).select().single()
+
+    if (newSlot) setBlockedSlots(prev => [...prev, newSlot])
+    setBlockStart('')
+    setBlockEnd('')
+    setBlockReason('')
+    setShowBlockForm(false)
+    setSavingBlock(false)
+  }
+
+  async function deleteBlockedSlot(id: string) {
+    await supabase.from('blocked_slots').delete().eq('id', id)
+    setBlockedSlots(prev => prev.filter(b => b.id !== id))
   }
 
   function prevMonth() {
@@ -355,6 +399,93 @@ export default function CalendarioPage() {
                     </>
                   )
                 })()}
+
+                {/* HORAS BLOQUEADAS */}
+                <div>
+                  <div className="px-5 py-2 flex items-center justify-between" style={{ background: '#0a1220', borderBottom: '1px solid #1a2d45' }}>
+                    <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#f87171' }}>Horas bloqueadas</p>
+                    <button
+                      onClick={() => setShowBlockForm(v => !v)}
+                      className="text-xs font-bold px-2.5 py-1 rounded-lg transition"
+                      style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171' }}
+                    >
+                      {showBlockForm ? 'Cancelar' : '+ Bloquear horas'}
+                    </button>
+                  </div>
+
+                  {showBlockForm && (
+                    <div className="px-5 py-4 space-y-3" style={{ borderBottom: '1px solid #1a2d45' }}>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs font-semibold mb-1" style={{ color: '#6b8ab0' }}>Desde</p>
+                          <input
+                            type="time"
+                            value={blockStart}
+                            onChange={e => setBlockStart(e.target.value)}
+                            className="w-full rounded-xl px-3 py-2 text-white text-sm outline-none"
+                            style={{ background: '#0a1220', border: '1.5px solid #1a2d45' }}
+                          />
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold mb-1" style={{ color: '#6b8ab0' }}>Hasta</p>
+                          <input
+                            type="time"
+                            value={blockEnd}
+                            onChange={e => setBlockEnd(e.target.value)}
+                            className="w-full rounded-xl px-3 py-2 text-white text-sm outline-none"
+                            style={{ background: '#0a1220', border: '1.5px solid #1a2d45' }}
+                          />
+                        </div>
+                      </div>
+                      <input
+                        type="text"
+                        value={blockReason}
+                        onChange={e => setBlockReason(e.target.value)}
+                        placeholder="Motivo (ej: Médico, Analítica...)"
+                        className="w-full rounded-xl px-3 py-2 text-white text-sm outline-none"
+                        style={{ background: '#0a1220', border: '1.5px solid #1a2d45' }}
+                      />
+                      <button
+                        onClick={saveBlockedSlot}
+                        disabled={savingBlock || !blockStart || !blockEnd || blockStart >= blockEnd}
+                        className="w-full py-2.5 rounded-xl text-sm font-bold transition"
+                        style={{
+                          background: savingBlock || !blockStart || !blockEnd || blockStart >= blockEnd ? '#1a2d45' : 'rgba(239,68,68,0.15)',
+                          color: savingBlock || !blockStart || !blockEnd || blockStart >= blockEnd ? '#3a5070' : '#f87171',
+                          border: '1px solid rgba(239,68,68,0.3)',
+                        }}
+                      >
+                        {savingBlock ? 'Guardando...' : 'Bloquear horas'}
+                      </button>
+                    </div>
+                  )}
+
+                  {blockedSlots.filter(b => b.date === selectedDate).length === 0 && !showBlockForm ? (
+                    <div className="px-5 py-4">
+                      <p className="text-xs" style={{ color: '#1a2d45' }}>Sin horas bloqueadas</p>
+                    </div>
+                  ) : (
+                    blockedSlots.filter(b => b.date === selectedDate).map(slot => (
+                      <div key={slot.id} className="px-5 py-3 flex items-center gap-3" style={{ borderBottom: '1px solid #0f1c2e' }}>
+                        <div className="w-1 h-8 rounded-full flex-shrink-0" style={{ background: 'rgba(239,68,68,0.5)' }} />
+                        <div className="flex-1">
+                          <p className="text-sm font-bold" style={{ color: '#f87171' }}>
+                            {slot.start_time.substring(0, 5)} – {slot.end_time.substring(0, 5)}
+                          </p>
+                          {slot.reason && <p className="text-xs mt-0.5" style={{ color: '#3a5070' }}>{slot.reason}</p>}
+                        </div>
+                        <button
+                          onClick={() => deleteBlockedSlot(slot.id)}
+                          className="text-xs px-2 py-1 rounded-lg transition"
+                          style={{ color: '#f87171', background: 'rgba(239,68,68,0.08)' }}
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+
               </div>
             </div>
           )}

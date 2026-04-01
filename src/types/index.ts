@@ -57,6 +57,16 @@ export interface BlockedDay {
   created_at: string
 }
 
+export interface BlockedSlot {
+  id: string
+  instructor_id: string
+  date: string
+  start_time: string
+  end_time: string
+  reason: string | null
+  created_at: string
+}
+
 export interface Exam {
   id: string
   student_id: string
