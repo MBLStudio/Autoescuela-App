@@ -402,87 +402,146 @@ export default function CalendarioPage() {
 
                 {/* HORAS BLOQUEADAS */}
                 <div>
-                  <div className="px-5 py-2 flex items-center justify-between" style={{ background: '#0a1220', borderBottom: '1px solid #1a2d45' }}>
-                    <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#f87171' }}>Horas bloqueadas</p>
+                  <div className="px-5 py-3 flex items-center justify-between" style={{ background: '#0a1220', borderBottom: '1px solid #1a2d45' }}>
+                    <div className="flex items-center gap-2">
+                      <span style={{ color: '#f87171' }}>🔒</span>
+                      <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#f87171' }}>Bloquear franja</p>
+                    </div>
                     <button
-                      onClick={() => setShowBlockForm(v => !v)}
-                      className="text-xs font-bold px-2.5 py-1 rounded-lg transition"
-                      style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171' }}
+                      onClick={() => { setShowBlockForm(v => !v); setBlockStart(''); setBlockEnd(''); setBlockReason('') }}
+                      className="text-xs font-bold px-3 py-1.5 rounded-lg transition"
+                      style={{
+                        background: showBlockForm ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.1)',
+                        color: '#f87171',
+                        border: '1px solid rgba(239,68,68,0.2)',
+                      }}
                     >
-                      {showBlockForm ? 'Cancelar' : '+ Bloquear horas'}
+                      {showBlockForm ? '✕ Cancelar' : '+ Nueva franja'}
                     </button>
                   </div>
 
                   {showBlockForm && (
-                    <div className="px-5 py-4 space-y-3" style={{ borderBottom: '1px solid #1a2d45' }}>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <p className="text-xs font-semibold mb-1" style={{ color: '#6b8ab0' }}>Desde</p>
-                          <input
-                            type="time"
-                            value={blockStart}
-                            onChange={e => setBlockStart(e.target.value)}
-                            className="w-full rounded-xl px-3 py-2 text-white text-sm outline-none"
-                            style={{ background: '#0a1220', border: '1.5px solid #1a2d45' }}
-                          />
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold mb-1" style={{ color: '#6b8ab0' }}>Hasta</p>
-                          <input
-                            type="time"
-                            value={blockEnd}
-                            onChange={e => setBlockEnd(e.target.value)}
-                            className="w-full rounded-xl px-3 py-2 text-white text-sm outline-none"
-                            style={{ background: '#0a1220', border: '1.5px solid #1a2d45' }}
-                          />
+                    <div className="px-5 py-4 space-y-4" style={{ background: 'rgba(239,68,68,0.04)', borderBottom: '1px solid rgba(239,68,68,0.15)' }}>
+
+                      {/* Presets rápidos */}
+                      <div>
+                        <p className="text-xs font-semibold mb-2" style={{ color: '#6b8ab0' }}>Accesos rápidos</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { label: '☀️ Mañana entera', start: '08:00', end: '14:00' },
+                            { label: '🌆 Tarde entera', start: '16:00', end: '19:30' },
+                            { label: '🕐 Primera hora', start: '08:00', end: '10:00' },
+                            { label: '🕔 Última hora', start: '18:00', end: '19:30' },
+                          ].map(preset => (
+                            <button
+                              key={preset.label}
+                              onClick={() => { setBlockStart(preset.start); setBlockEnd(preset.end) }}
+                              className="py-2 px-3 rounded-xl text-xs font-semibold text-left transition"
+                              style={{
+                                background: blockStart === preset.start && blockEnd === preset.end ? 'rgba(239,68,68,0.15)' : '#0a1220',
+                                border: `1.5px solid ${blockStart === preset.start && blockEnd === preset.end ? 'rgba(239,68,68,0.4)' : '#1a2d45'}`,
+                                color: blockStart === preset.start && blockEnd === preset.end ? '#f87171' : '#6b8ab0',
+                              }}
+                            >
+                              {preset.label}
+                            </button>
+                          ))}
                         </div>
                       </div>
+
+                      {/* Personalizado */}
+                      <div>
+                        <p className="text-xs font-semibold mb-2" style={{ color: '#6b8ab0' }}>O elige horas exactas</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <p className="text-xs mb-1" style={{ color: '#3a5070' }}>Desde</p>
+                            <input
+                              type="time"
+                              value={blockStart}
+                              onChange={e => setBlockStart(e.target.value)}
+                              className="w-full rounded-xl px-3 py-2.5 text-white text-sm outline-none"
+                              style={{ background: '#0a1220', border: '1.5px solid #1a2d45' }}
+                            />
+                          </div>
+                          <div>
+                            <p className="text-xs mb-1" style={{ color: '#3a5070' }}>Hasta</p>
+                            <input
+                              type="time"
+                              value={blockEnd}
+                              onChange={e => setBlockEnd(e.target.value)}
+                              className="w-full rounded-xl px-3 py-2.5 text-white text-sm outline-none"
+                              style={{ background: '#0a1220', border: '1.5px solid #1a2d45' }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Motivo */}
                       <input
                         type="text"
                         value={blockReason}
                         onChange={e => setBlockReason(e.target.value)}
-                        placeholder="Motivo (ej: Médico, Analítica...)"
-                        className="w-full rounded-xl px-3 py-2 text-white text-sm outline-none"
+                        placeholder="Motivo (ej: Médico, Examen teórico...)"
+                        className="w-full rounded-xl px-3 py-2.5 text-white text-sm outline-none"
                         style={{ background: '#0a1220', border: '1.5px solid #1a2d45' }}
                       />
+
+                      {blockStart && blockEnd && blockStart < blockEnd && (
+                        <div className="rounded-xl px-4 py-2.5 flex items-center gap-2" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                          <span style={{ color: '#f87171' }}>🔒</span>
+                          <p className="text-sm font-bold" style={{ color: '#f87171' }}>
+                            {blockStart} – {blockEnd}
+                            {blockReason && <span className="font-normal text-xs ml-2" style={{ color: '#f87171', opacity: 0.7 }}>· {blockReason}</span>}
+                          </p>
+                        </div>
+                      )}
+
                       <button
                         onClick={saveBlockedSlot}
                         disabled={savingBlock || !blockStart || !blockEnd || blockStart >= blockEnd}
-                        className="w-full py-2.5 rounded-xl text-sm font-bold transition"
+                        className="w-full py-3 rounded-xl text-sm font-bold transition"
                         style={{
-                          background: savingBlock || !blockStart || !blockEnd || blockStart >= blockEnd ? '#1a2d45' : 'rgba(239,68,68,0.15)',
-                          color: savingBlock || !blockStart || !blockEnd || blockStart >= blockEnd ? '#3a5070' : '#f87171',
-                          border: '1px solid rgba(239,68,68,0.3)',
+                          background: savingBlock || !blockStart || !blockEnd || blockStart >= blockEnd ? '#1a2d45' : '#ef4444',
+                          color: savingBlock || !blockStart || !blockEnd || blockStart >= blockEnd ? '#3a5070' : 'white',
                         }}
                       >
-                        {savingBlock ? 'Guardando...' : 'Bloquear horas'}
+                        {savingBlock ? 'Guardando...' : '🔒 Confirmar bloqueo'}
                       </button>
                     </div>
                   )}
 
-                  {blockedSlots.filter(b => b.date === selectedDate).length === 0 && !showBlockForm ? (
-                    <div className="px-5 py-4">
-                      <p className="text-xs" style={{ color: '#1a2d45' }}>Sin horas bloqueadas</p>
+                  {/* Lista de franjas bloqueadas */}
+                  {blockedSlots.filter(b => b.date === selectedDate).length === 0 ? (
+                    <div className="px-5 py-5 text-center">
+                      <p className="text-xs" style={{ color: '#1a2d45' }}>Ninguna franja bloqueada para este día</p>
                     </div>
                   ) : (
-                    blockedSlots.filter(b => b.date === selectedDate).map(slot => (
-                      <div key={slot.id} className="px-5 py-3 flex items-center gap-3" style={{ borderBottom: '1px solid #0f1c2e' }}>
-                        <div className="w-1 h-8 rounded-full flex-shrink-0" style={{ background: 'rgba(239,68,68,0.5)' }} />
-                        <div className="flex-1">
-                          <p className="text-sm font-bold" style={{ color: '#f87171' }}>
-                            {slot.start_time.substring(0, 5)} – {slot.end_time.substring(0, 5)}
-                          </p>
-                          {slot.reason && <p className="text-xs mt-0.5" style={{ color: '#3a5070' }}>{slot.reason}</p>}
+                    <div className="divide-y" style={{ borderColor: '#0f1c2e' }}>
+                      {blockedSlots.filter(b => b.date === selectedDate).map(slot => (
+                        <div key={slot.id} className="px-5 py-3.5 flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm" style={{ background: 'rgba(239,68,68,0.1)' }}>
+                            🔒
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-black" style={{ color: '#f87171' }}>
+                              {slot.start_time.substring(0, 5)} – {slot.end_time.substring(0, 5)}
+                            </p>
+                            <p className="text-xs mt-0.5" style={{ color: '#3a5070' }}>
+                              {slot.reason ?? 'Sin motivo'}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => deleteBlockedSlot(slot.id)}
+                            className="text-xs px-3 py-1.5 rounded-lg font-bold transition"
+                            style={{ color: '#f87171', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)' }}
+                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.15)'}
+                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.08)'}
+                          >
+                            Eliminar
+                          </button>
                         </div>
-                        <button
-                          onClick={() => deleteBlockedSlot(slot.id)}
-                          className="text-xs px-2 py-1 rounded-lg transition"
-                          style={{ color: '#f87171', background: 'rgba(239,68,68,0.08)' }}
-                        >
-                          Quitar
-                        </button>
-                      </div>
-                    ))
+                      ))}
+                    </div>
                   )}
                 </div>
 
