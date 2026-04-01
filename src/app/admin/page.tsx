@@ -28,8 +28,13 @@ export default function AdminPage() {
     setLoading(false)
   }
 
-  async function markCompleted(id: string) {
-    await supabase.from('bookings').update({ status: 'completed' }).eq('id', id)
+  async function markCompleted(booking: Booking) {
+    await supabase.from('bookings').update({ status: 'completed' }).eq('id', booking.id)
+    fetch('/api/notify-milestone', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentId: booking.student_id, instructorId: booking.instructor_id }),
+    }).catch(() => {})
     fetchBookings()
   }
 
@@ -169,7 +174,7 @@ export default function AdminPage() {
               {booking.status === 'confirmed' && (
                 <div className="flex gap-2">
                   <button
-                    onClick={() => markCompleted(booking.id)}
+                    onClick={() => markCompleted(booking)}
                     className="text-xs px-3 py-1.5 rounded-lg font-semibold transition-all duration-150"
                     style={{ background: 'rgba(52,211,153,0.1)', color: '#34d399' }}
                     onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(52,211,153,0.2)'}

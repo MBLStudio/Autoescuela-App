@@ -15,6 +15,7 @@ export interface Instructor {
   morning_end: string
   afternoon_start: string
   afternoon_end: string
+  milestone_counts: number[]
   created_at: string
 }
 

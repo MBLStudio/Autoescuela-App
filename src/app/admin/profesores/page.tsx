@@ -21,6 +21,12 @@ export default function ProfesoresPage() {
 
   // Editar horario
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null)
+
+  // Editar hitos
+  const [editingMilestonesId, setEditingMilestonesId] = useState<string | null>(null)
+  const [milestonesInput, setMilestonesInput] = useState('')
+  const [savingMilestones, setSavingMilestones] = useState(false)
+  const [milestonesError, setMilestonesError] = useState('')
   const [scheduleForm, setScheduleForm] = useState({
     schedule_morning: true, morning_start: '08:00', morning_end: '13:30',
     schedule_afternoon: true, afternoon_start: '16:00', afternoon_end: '19:15',
@@ -71,6 +77,24 @@ export default function ProfesoresPage() {
       setInviteSuccess(false)
       setShowInvite(false)
     }, 3000)
+  }
+
+  async function saveMilestones(instructorId: string) {
+    setMilestonesError('')
+    const parsed = milestonesInput
+      .split(',')
+      .map(s => parseInt(s.trim(), 10))
+      .filter(n => !isNaN(n) && n > 0)
+    if (parsed.length === 0) {
+      setMilestonesError('Introduce al menos un número válido')
+      return
+    }
+    const sorted = [...new Set(parsed)].sort((a, b) => a - b)
+    setSavingMilestones(true)
+    await supabase.from('instructors').update({ milestone_counts: sorted }).eq('id', instructorId)
+    setInstructors(prev => prev.map(i => i.id === instructorId ? { ...i, milestone_counts: sorted } : i))
+    setEditingMilestonesId(null)
+    setSavingMilestones(false)
   }
 
   async function saveSchedule(instructorId: string) {
@@ -231,6 +255,7 @@ export default function ProfesoresPage() {
           <div className="divide-y" style={{ borderColor: '#0f1c2e' }}>
             {instructors.map(inst => {
               const isEditing = editingScheduleId === inst.id
+              const isEditingMilestones = editingMilestonesId === inst.id
               return (
                 <div key={inst.id} className="px-5 py-4 space-y-3">
                   <div className="flex items-center gap-4">
@@ -244,7 +269,20 @@ export default function ProfesoresPage() {
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
                         onClick={() => {
+                          setEditingMilestonesId(isEditingMilestones ? null : inst.id)
+                          setEditingScheduleId(null)
+                          setMilestonesError('')
+                          setMilestonesInput((inst.milestone_counts ?? [5, 10, 15, 20]).join(', '))
+                        }}
+                        className="text-xs px-2.5 py-1 rounded-lg font-semibold transition"
+                        style={{ color: '#6b8ab0', background: '#0a1220', border: '1px solid #1a2d45' }}
+                      >
+                        {isEditingMilestones ? 'Cancelar' : '🎯 Hitos'}
+                      </button>
+                      <button
+                        onClick={() => {
                           setEditingScheduleId(isEditing ? null : inst.id)
+                          setEditingMilestonesId(null)
                           setScheduleForm({
                             schedule_morning: inst.schedule_morning ?? true,
                             morning_start: (inst.morning_start ?? '08:00').substring(0, 5),
@@ -263,11 +301,45 @@ export default function ProfesoresPage() {
                     </div>
                   </div>
 
-                  {/* Resumen horario */}
-                  {!isEditing && (
-                    <div className="flex gap-3 text-xs" style={{ color: '#3a5070' }}>
+                  {/* Resumen horario + hitos */}
+                  {!isEditing && !isEditingMilestones && (
+                    <div className="flex flex-wrap gap-3 text-xs" style={{ color: '#3a5070' }}>
                       {(inst.schedule_morning ?? true) && <span>☀️ {(inst.morning_start ?? '08:00').substring(0,5)} – {(inst.morning_end ?? '13:30').substring(0,5)}</span>}
                       {(inst.schedule_afternoon ?? true) && <span>🌆 {(inst.afternoon_start ?? '16:00').substring(0,5)} – {(inst.afternoon_end ?? '19:15').substring(0,5)}</span>}
+                      <span>🎯 Hitos: {(inst.milestone_counts ?? [5, 10, 15, 20]).join(', ')}</span>
+                    </div>
+                  )}
+
+                  {/* Formulario hitos */}
+                  {isEditingMilestones && (
+                    <div className="rounded-xl p-4 space-y-3" style={{ background: '#0a1220', border: '1px solid #1a2d45' }}>
+                      <p className="text-xs font-semibold" style={{ color: '#6b8ab0' }}>
+                        Número de prácticas completadas en los que el alumno recibe un email de felicitación.
+                      </p>
+                      <div>
+                        <label className="block text-xs font-semibold mb-1.5" style={{ color: '#a0b8d0' }}>
+                          Hitos (separados por comas)
+                        </label>
+                        <input
+                          type="text"
+                          value={milestonesInput}
+                          onChange={e => setMilestonesInput(e.target.value)}
+                          placeholder="5, 10, 15, 20"
+                          className="w-full rounded-lg px-3 py-2 text-white text-sm outline-none"
+                          style={{ background: '#0d1829', border: '1px solid #1a2d45' }}
+                        />
+                      </div>
+                      {milestonesError && (
+                        <p className="text-xs" style={{ color: '#f87171' }}>{milestonesError}</p>
+                      )}
+                      <button
+                        onClick={() => saveMilestones(inst.id)}
+                        disabled={savingMilestones}
+                        className="w-full py-2.5 rounded-xl text-sm font-bold text-white transition"
+                        style={{ background: savingMilestones ? '#1a2d45' : '#0057B8' }}
+                      >
+                        {savingMilestones ? 'Guardando...' : 'Guardar hitos'}
+                      </button>
                     </div>
                   )}
 
