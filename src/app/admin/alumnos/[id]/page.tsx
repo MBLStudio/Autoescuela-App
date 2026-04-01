@@ -72,7 +72,7 @@ export default function AlumnoPerfilPage() {
     setEditLimits(false)
   }
 
-  async function togglePracticeType(type: 'car' | 'truck') {
+  async function togglePracticeType(type: 'car' | 'truck' | 'moto') {
     if (!student) return
     const has = student.practice_types.includes(type)
     // Evitar dejar el array vacío
@@ -179,9 +179,10 @@ export default function AlumnoPerfilPage() {
             <div>
               <p className="text-xs font-semibold mb-1.5" style={{ color: '#3a5070' }}>Prácticas habilitadas</p>
               <div className="flex gap-2">
-                {(['car', 'truck'] as const).map(type => {
+                {(['car', 'truck', 'moto'] as const).map(type => {
                   const active = student.practice_types.includes(type)
                   const isOnly = student.practice_types.length === 1 && active
+                  const color = type === 'car' ? '#0057B8' : type === 'truck' ? '#38bdf8' : '#a78bfa'
                   return (
                     <button
                       key={type}
@@ -190,14 +191,14 @@ export default function AlumnoPerfilPage() {
                       title={isOnly ? 'Debe tener al menos un tipo' : undefined}
                       className="flex-1 py-2 rounded-xl text-xs font-bold transition"
                       style={{
-                        background: active ? (type === 'car' ? '#0057B820' : '#38bdf820') : '#0a1220',
-                        border: `1.5px solid ${active ? (type === 'car' ? '#0057B8' : '#38bdf8') : '#1a2d45'}`,
-                        color: active ? (type === 'car' ? '#0057B8' : '#38bdf8') : '#3a5070',
+                        background: active ? `${color}20` : '#0a1220',
+                        border: `1.5px solid ${active ? color : '#1a2d45'}`,
+                        color: active ? color : '#3a5070',
                         opacity: savingTypes ? 0.6 : 1,
                         cursor: isOnly ? 'not-allowed' : 'pointer',
                       }}
                     >
-                      {type === 'car' ? '🚗 Coche' : '🚛 Camión'}
+                      {type === 'car' ? '🚗 Coche' : type === 'truck' ? '🚛 Camión' : '🏍️ Moto'}
                     </button>
                   )
                 })}

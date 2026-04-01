@@ -55,15 +55,26 @@ export function toDateString(date: Date): string {
   return date.toISOString().split('T')[0]
 }
 
+// ── Duración en minutos según tipo y subtipo ──────────────────────────────────
+export function getDuration(type: 'car' | 'truck' | 'moto', subtype?: 'pista' | 'circulacion' | null): number {
+  if (type === 'moto' && subtype === 'pista') return 30
+  return 45
+}
+
+// ── Descanso en minutos según tipo y subtipo ──────────────────────────────────
+export function getBreak(type: 'car' | 'truck' | 'moto', subtype?: 'pista' | 'circulacion' | null): number {
+  if (type === 'truck' && subtype === 'circulacion') return 30
+  return 10
+}
+
 // ── Genera los slots de un día según tipo y subtipo de práctica ───────────────
-// Coche: 45 min + 10 min gap | Camión pista: 45+10 | Camión circulación: 45+30
 export function generateTimeSlots(
-  practiceType: 'car' | 'truck',
+  practiceType: 'car' | 'truck' | 'moto',
   practiceSubtype?: 'pista' | 'circulacion' | null
 ): string[] {
   const slots: string[] = []
-  const duration = 45
-  const breakTime = practiceType === 'truck' && practiceSubtype === 'circulacion' ? 30 : 10
+  const duration = getDuration(practiceType, practiceSubtype)
+  const breakTime = getBreak(practiceType, practiceSubtype)
 
   const sessions = [
     { start: '08:00', end: '13:30' },
@@ -90,8 +101,11 @@ export function generateTimeSlots(
 }
 
 // ── Etiqueta legible del tipo de práctica ─────────────────────────────────────
-export function getPracticeLabel(type: 'car' | 'truck', subtype?: 'pista' | 'circulacion' | null): string {
+export function getPracticeLabel(type: 'car' | 'truck' | 'moto', subtype?: 'pista' | 'circulacion' | null): string {
   if (type === 'car') return 'Coche'
+  if (type === 'moto' && subtype === 'pista') return 'Moto Pista'
+  if (type === 'moto' && subtype === 'circulacion') return 'Moto Circulación'
+  if (type === 'moto') return 'Moto'
   if (subtype === 'pista') return 'Camión Pista'
   if (subtype === 'circulacion') return 'Camión Circulación'
   return 'Camión'

@@ -1,4 +1,4 @@
-export type PracticeType = 'car' | 'truck'
+export type PracticeType = 'car' | 'truck' | 'moto'
 export type PracticeSubtype = 'pista' | 'circulacion'
 export type BookingStatus = 'confirmed' | 'cancelled' | 'completed'
 export type ExamType = 'theory' | 'practical'

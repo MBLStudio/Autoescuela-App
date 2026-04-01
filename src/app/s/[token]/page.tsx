@@ -3,10 +3,9 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { formatDate, formatTime, getDayName, toDateString, getPracticeLabel, generateTimeSlots } from '@/lib/utils'
+import { formatDate, formatTime, getDayName, toDateString, getPracticeLabel, generateTimeSlots, getDuration, getBreak } from '@/lib/utils'
 import type { Student, Booking, PracticeType, PracticeSubtype, Exam } from '@/types'
 
-const SLOT_DURATION = 45
 const MIN_ADVANCE_HOURS = 24
 const MAX_BOOKING_DAYS = 7
 
@@ -174,19 +173,15 @@ export default function StudentPage() {
     return h * 60 + m
   }
 
-  function breakFor(type: PracticeType, subtype: PracticeSubtype | null): number {
-    return type === 'truck' && subtype === 'circulacion' ? 30 : 10
-  }
-
   function isSlotBlocked(date: string, slotStart: string, slotType: PracticeType, slotSubtype: PracticeSubtype | null): boolean {
     const sStart = toMins(slotStart)
-    const sEnd = sStart + SLOT_DURATION + breakFor(slotType, slotSubtype)
+    const sEnd = sStart + getDuration(slotType, slotSubtype) + getBreak(slotType, slotSubtype)
 
     // Comprobar overlap con otras reservas
     const overlapsBooking = takenSlots.some(t => {
       if (t.date !== date) return false
       const bStart = toMins(t.start)
-      const bEnd = bStart + SLOT_DURATION + breakFor(t.type, t.subtype)
+      const bEnd = bStart + getDuration(t.type, t.subtype) + getBreak(t.type, t.subtype)
       return bStart < sEnd && sStart < bEnd
     })
 
@@ -279,7 +274,8 @@ export default function StudentPage() {
     }
 
     const [h, m] = selectedSlot.split(':').map(Number)
-    const endMinutes = h * 60 + m + SLOT_DURATION
+    const duration = getDuration(selectedType, selectedSubtype)
+    const endMinutes = h * 60 + m + duration
     const endTime = `${String(Math.floor(endMinutes / 60)).padStart(2, '0')}:${String(endMinutes % 60).padStart(2, '0')}`
 
     const { error } = await supabase.from('bookings').insert({
@@ -739,55 +735,59 @@ export default function StudentPage() {
                 {student.practice_types.map(type => (
                   <button
                     key={type}
-                    onClick={() => { setSelectedType(type); if (type === 'car') setSelectedSubtype(null) }}
+                    onClick={() => { setSelectedType(type); setSelectedSubtype(null) }}
                     className="py-4 rounded-xl text-sm font-bold transition-all duration-200"
                     style={{
-                      background: selectedType === type ? (type === 'car' ? '#0057B820' : '#38bdf820') : '#0a1220',
-                      border: `2px solid ${selectedType === type ? (type === 'car' ? '#0057B8' : '#38bdf8') : '#1a2d45'}`,
-                      color: selectedType === type ? (type === 'car' ? '#0057B8' : '#38bdf8') : '#3a5070',
+                      background: selectedType === type ? (type === 'car' ? '#0057B820' : type === 'truck' ? '#38bdf820' : '#a78bfa20') : '#0a1220',
+                      border: `2px solid ${selectedType === type ? (type === 'car' ? '#0057B8' : type === 'truck' ? '#38bdf8' : '#a78bfa') : '#1a2d45'}`,
+                      color: selectedType === type ? (type === 'car' ? '#0057B8' : type === 'truck' ? '#38bdf8' : '#a78bfa') : '#3a5070',
                     }}
                   >
-                    {type === 'car' ? '🚗 Coche' : '🚛 Camión'}
+                    {type === 'car' ? '🚗 Coche' : type === 'truck' ? '🚛 Camión' : '🏍️ Moto'}
                   </button>
                 ))}
               </div>
 
-              {/* Subtipo — solo si camión seleccionado */}
-              {selectedType === 'truck' && (
+              {/* Subtipo — camión o moto */}
+              {(selectedType === 'truck' || selectedType === 'moto') && (
                 <div>
                   <p className="text-xs font-semibold mb-2" style={{ color: '#6b8ab0' }}>Modalidad</p>
                   <div className="grid grid-cols-2 gap-3">
                     {([
-                      { value: 'pista' as PracticeSubtype, label: 'Pista' },
-                      { value: 'circulacion' as PracticeSubtype, label: 'Circulación' },
-                    ]).map(({ value, label }) => (
-                      <button
-                        key={value}
-                        onClick={() => setSelectedSubtype(value)}
-                        className="py-3 rounded-xl text-sm font-bold transition-all duration-200"
-                        style={{
-                          background: selectedSubtype === value ? '#38bdf820' : '#0a1220',
-                          border: `2px solid ${selectedSubtype === value ? '#38bdf8' : '#1a2d45'}`,
-                          color: selectedSubtype === value ? '#38bdf8' : '#3a5070',
-                        }}
-                      >
-                        {label}
-                      </button>
-                    ))}
+                      { value: 'pista' as PracticeSubtype, label: 'Pista', extra: selectedType === 'moto' ? '30 min' : '45 min' },
+                      { value: 'circulacion' as PracticeSubtype, label: 'Circulación', extra: '45 min' },
+                    ]).map(({ value, label, extra }) => {
+                      const color = selectedType === 'truck' ? '#38bdf8' : '#a78bfa'
+                      return (
+                        <button
+                          key={value}
+                          onClick={() => setSelectedSubtype(value)}
+                          className="py-3 rounded-xl text-sm font-bold transition-all duration-200"
+                          style={{
+                            background: selectedSubtype === value ? `${color}20` : '#0a1220',
+                            border: `2px solid ${selectedSubtype === value ? color : '#1a2d45'}`,
+                            color: selectedSubtype === value ? color : '#3a5070',
+                          }}
+                        >
+                          <span className="block">{label}</span>
+                          <span className="text-xs font-normal opacity-70">{extra}</span>
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               )}
 
               <button
                 onClick={() => setStep('date')}
-                disabled={selectedType === 'truck' && !selectedSubtype}
+                disabled={(selectedType === 'truck' || selectedType === 'moto') && !selectedSubtype}
                 className="w-full py-3 rounded-xl text-sm font-bold text-white transition"
                 style={{
-                  background: selectedType === 'truck' && !selectedSubtype ? '#1a2d45' : '#0057B8',
-                  color: selectedType === 'truck' && !selectedSubtype ? '#3a5070' : 'white',
+                  background: (selectedType === 'truck' || selectedType === 'moto') && !selectedSubtype ? '#1a2d45' : '#0057B8',
+                  color: (selectedType === 'truck' || selectedType === 'moto') && !selectedSubtype ? '#3a5070' : 'white',
                 }}
-                onMouseEnter={e => { if (!(selectedType === 'truck' && !selectedSubtype)) (e.currentTarget as HTMLElement).style.background = '#004494' }}
-                onMouseLeave={e => { if (!(selectedType === 'truck' && !selectedSubtype)) (e.currentTarget as HTMLElement).style.background = '#0057B8' }}
+                onMouseEnter={e => { if (!((selectedType === 'truck' || selectedType === 'moto') && !selectedSubtype)) (e.currentTarget as HTMLElement).style.background = '#004494' }}
+                onMouseLeave={e => { if (!((selectedType === 'truck' || selectedType === 'moto') && !selectedSubtype)) (e.currentTarget as HTMLElement).style.background = '#0057B8' }}
               >
                 Continuar →
               </button>
@@ -936,12 +936,12 @@ export default function StudentPage() {
                   {
                     label: 'Hora', value: (() => {
                       const [h, m] = selectedSlot.split(':').map(Number)
-                      const end = h * 60 + m + SLOT_DURATION
+                      const end = h * 60 + m + getDuration(selectedType, selectedSubtype)
                       return `${selectedSlot} – ${String(Math.floor(end / 60)).padStart(2, '0')}:${String(end % 60).padStart(2, '0')}`
                     })()
                   },
                   { label: 'Tipo', value: getPracticeLabel(selectedType, selectedSubtype) },
-                  { label: 'Duración', value: '45 minutos' },
+                  { label: 'Duración', value: `${getDuration(selectedType, selectedSubtype)} minutos` },
                 ].map(({ label, value }) => (
                   <div key={label} className="flex justify-between items-center text-sm">
                     <span style={{ color: '#6b8ab0' }}>{label}</span>
