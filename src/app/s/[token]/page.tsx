@@ -259,6 +259,22 @@ export default function StudentPage() {
       }),
     }).catch(() => {})
 
+    // Notificar al instructor de la cancelación
+    fetch('/api/notify-instructor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        instructorId: student!.instructor_id,
+        studentName: student!.full_name,
+        practiceDate: booking.practice_date,
+        startTime: booking.start_time,
+        practiceType: booking.practice_type,
+        practiceSubtype: booking.practice_subtype,
+        pickupLocation: booking.pickup_location,
+        action: 'cancelled',
+      }),
+    }).catch(() => {})
+
     setCancellingId(null)
     await Promise.all([fetchMyBookings(student!.id), fetchTakenSlots(student!.instructor_id)])
     setCancelling(false)
@@ -354,6 +370,22 @@ export default function StudentPage() {
         })
         .catch(() => {})
     }
+
+    // Notificar al instructor de la nueva reserva
+    fetch('/api/notify-instructor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        instructorId: student.instructor_id,
+        studentName: student.full_name,
+        practiceDate: selectedDate,
+        startTime: selectedSlot,
+        practiceType: selectedType,
+        practiceSubtype: selectedSubtype,
+        pickupLocation: selectedLocation || null,
+        action: 'booked',
+      }),
+    }).catch(() => {})
 
     await Promise.all([fetchMyBookings(student.id), fetchTakenSlots(student.instructor_id), fetchAllBookings(student.id)])
     setStep('success')
