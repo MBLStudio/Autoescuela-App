@@ -137,7 +137,7 @@ export async function GET(req: NextRequest) {
   const byInstructor = new Map<string, BookingRow[]>()
   for (const b of bookings) {
     const list = byInstructor.get(b.instructor_id) ?? []
-    list.push(b as BookingRow)
+    list.push(b as unknown as BookingRow)
     byInstructor.set(b.instructor_id, list)
   }
 

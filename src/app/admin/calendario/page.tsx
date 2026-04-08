@@ -341,7 +341,7 @@ export default function CalendarioPage() {
                           >
                             <p className="text-xs font-black font-mono w-12 flex-shrink-0" style={{ color: '#6b8ab0' }}>{booking.start_time.substring(0, 5)}</p>
                             <div className="w-px h-6 flex-shrink-0" style={{ background: '#1a2d45' }} />
-                            <div className="w-1 h-8 rounded-full flex-shrink-0" style={{ background: iscar ? '#0057B8' : '#38bdf8' }} />
+                            <div className="w-1 h-8 rounded-full flex-shrink-0" style={{ background: iscar ? '#0057B8' : type === 'moto' ? '#a78bfa' : '#38bdf8' }} />
                             <div className="flex-1">
                               <p className="text-white text-sm font-bold">{(booking.student as any)?.full_name ?? '—'}</p>
                               <p className="text-xs mt-0.5" style={{ color: '#3a5070' }}>
@@ -349,8 +349,8 @@ export default function CalendarioPage() {
                               </p>
                             </div>
                             <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{
-                              background: iscar ? '#0057B820' : '#38bdf820',
-                              color: iscar ? '#0057B8' : '#38bdf8',
+                              background: iscar ? '#0057B820' : type === 'moto' ? '#a78bfa20' : '#38bdf820',
+                              color: iscar ? '#0057B8' : type === 'moto' ? '#a78bfa' : '#38bdf8',
                             }}>
                               {getPracticeLabel(type, subtype)}
                             </span>

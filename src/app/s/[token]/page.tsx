@@ -494,7 +494,7 @@ export default function StudentPage() {
                     <div className="px-4 py-3 flex items-center gap-3">
                       <div
                         className="w-1 h-10 rounded-full flex-shrink-0"
-                        style={{ background: booking.practice_type === 'car' ? '#0057B8' : '#38bdf8' }}
+                        style={{ background: booking.practice_type === 'car' ? '#0057B8' : booking.practice_type === 'moto' ? '#a78bfa' : '#38bdf8' }}
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-white text-sm font-bold">
@@ -771,7 +771,7 @@ export default function StudentPage() {
                 {getDayName(selectedDate)}, {formatDate(selectedDate)}
               </p>
               <p className="text-sm" style={{ color: '#6b8ab0' }}>
-                {selectedSlot} · {getPracticeLabel(selectedType, selectedSubtype)} · 45 min
+                {selectedSlot} · {getPracticeLabel(selectedType, selectedSubtype)} · {getDuration(selectedType, selectedSubtype)} min
               </p>
               <button
                 onClick={resetBooking}

@@ -12,7 +12,7 @@ export default function AdminPage() {
 
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'car' | 'truck'>('all')
+  const [filter, setFilter] = useState<'all' | 'car' | 'truck' | 'moto'>('all')
 
   useEffect(() => { fetchBookings() }, [])
 
@@ -53,6 +53,7 @@ export default function AdminPage() {
   const filtered = filter === 'all' ? bookings : bookings.filter(b => b.practice_type === filter)
   const carCount = bookings.filter(b => b.practice_type === 'car').length
   const truckCount = bookings.filter(b => b.practice_type === 'truck').length
+  const motoCount = bookings.filter(b => b.practice_type === 'moto').length
   const completedCount = bookings.filter(b => b.status === 'completed').length
 
   return (
@@ -82,11 +83,12 @@ export default function AdminPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-5 gap-4 mb-8">
         {[
           { label: 'Total hoy', value: bookings.length, color: 'white' },
           { label: 'Coche', value: carCount, color: '#0057B8' },
           { label: 'Camión', value: truckCount, color: '#38bdf8' },
+          { label: 'Moto', value: motoCount, color: '#a78bfa' },
           { label: 'Completadas', value: completedCount, color: '#34d399' },
         ].map(stat => (
           <div key={stat.label} className="rounded-2xl p-5" style={{ background: '#0d1829', border: '1px solid #1a2d45' }}>
@@ -98,15 +100,15 @@ export default function AdminPage() {
 
       {/* Filtros */}
       <div className="flex gap-2 mb-6">
-        {(['all', 'car', 'truck'] as const).map(f => (
+        {(['all', 'car', 'truck', 'moto'] as const).map(f => (
           <button
             key={f}
             onClick={() => setFilter(f)}
             className="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-150"
             style={{
-              background: filter === f ? '#0057B8' : '#0d1829',
+              background: filter === f ? (f === 'moto' ? '#a78bfa' : '#0057B8') : '#0d1829',
               color: filter === f ? 'white' : '#6b8ab0',
-              border: filter === f ? '1px solid #0057B8' : '1px solid #1a2d45',
+              border: filter === f ? `1px solid ${f === 'moto' ? '#a78bfa' : '#0057B8'}` : '1px solid #1a2d45',
             }}
           >
             {f === 'all' ? 'Todos' : getPracticeLabel(f)}
@@ -136,7 +138,7 @@ export default function AdminPage() {
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1a2d45'}
             >
               {/* Franja de color */}
-              <div className="w-1 h-12 rounded-full flex-shrink-0" style={{ background: booking.practice_type === 'car' ? '#0057B8' : '#38bdf8' }} />
+              <div className="w-1 h-12 rounded-full flex-shrink-0" style={{ background: booking.practice_type === 'car' ? '#0057B8' : booking.practice_type === 'moto' ? '#a78bfa' : '#38bdf8' }} />
 
               {/* Hora */}
               <div className="text-center min-w-[56px]">
@@ -153,11 +155,11 @@ export default function AdminPage() {
                   <span
                     className="text-xs px-2 py-0.5 rounded-full font-semibold"
                     style={{
-                      background: booking.practice_type === 'car' ? '#0057B820' : '#38bdf820',
-                      color: booking.practice_type === 'car' ? '#0057B8' : '#38bdf8',
+                      background: booking.practice_type === 'car' ? '#0057B820' : booking.practice_type === 'moto' ? '#a78bfa20' : '#38bdf820',
+                      color: booking.practice_type === 'car' ? '#0057B8' : booking.practice_type === 'moto' ? '#a78bfa' : '#38bdf8',
                     }}
                   >
-                    {getPracticeLabel(booking.practice_type)}
+                    {getPracticeLabel(booking.practice_type, (booking as any).practice_subtype)}
                   </span>
                   <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusColor(booking.status)}`}>
                     {getStatusLabel(booking.status)}
