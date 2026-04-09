@@ -45,13 +45,13 @@ export async function createCalendarEvent(booking: {
   practiceDate: string
   startTime: string  // HH:MM
   endTime: string    // HH:MM
-  practiceType: 'car' | 'truck'
+  practiceType: 'car' | 'truck' | 'moto'
 }): Promise<string | null> {
   const calendarId = process.env.GOOGLE_CALENDAR_ID
   if (!calendarId) throw new Error('Falta GOOGLE_CALENDAR_ID en las variables de entorno')
 
   const accessToken = await getAccessToken()
-  const typeLabel = booking.practiceType === 'car' ? 'Coche' : 'Camión'
+  const typeLabel = booking.practiceType === 'car' ? 'Coche' : booking.practiceType === 'moto' ? 'Moto' : 'Camión'
 
   const event = {
     summary: `Práctica ${typeLabel} — ${booking.studentName}`,

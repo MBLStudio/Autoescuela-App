@@ -20,8 +20,7 @@ function getNextWorkingDays(count: number): Date[] {
   current.setHours(0, 0, 0, 0)
   let checked = 0
   while (days.length < count && checked < 60) {
-    const day = current.getDay()
-    if (day !== 0 && day !== 6) days.push(new Date(current))
+    days.push(new Date(current))
     current.setDate(current.getDate() + 1)
     checked++
   }
