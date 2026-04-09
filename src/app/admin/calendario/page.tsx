@@ -29,7 +29,7 @@ export default function CalendarioPage() {
   const [blockedDays, setBlockedDays] = useState<string[]>([])
   const [blockedSlots, setBlockedSlots] = useState<BlockedSlot[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'car' | 'truck'>('all')
+  const [filter, setFilter] = useState<'all' | 'car' | 'truck' | 'moto'>('all')
 
   // Estado para añadir bloqueo de horas
   const [showBlockForm, setShowBlockForm] = useState(false)
@@ -148,13 +148,13 @@ export default function CalendarioPage() {
           <h1 className="text-3xl font-black text-white tracking-tight">Calendario</h1>
         </div>
         <div className="flex gap-1 rounded-xl p-1" style={{ background: '#0d1829', border: '1px solid #1a2d45' }}>
-          {(['all', 'car', 'truck'] as const).map(f => (
+          {(['all', 'car', 'truck', 'moto'] as const).map(f => (
             <button
               key={f}
               onClick={() => setFilter(f)}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold transition"
               style={{
-                background: filter === f ? '#0057B8' : 'transparent',
+                background: filter === f ? (f === 'moto' ? '#a78bfa' : '#0057B8') : 'transparent',
                 color: filter === f ? 'white' : '#6b8ab0',
               }}
             >
@@ -211,25 +211,24 @@ export default function CalendarioPage() {
               const dayBookings = bookingsForDate(dateStr)
               const carCount = dayBookings.filter(b => b.practice_type === 'car').length
               const truckCount = dayBookings.filter(b => b.practice_type === 'truck').length
-              const hasBookings = dayBookings.length > 0
+              const motoCount = dayBookings.filter(b => b.practice_type === 'moto').length
 
               return (
                 <button
                   key={day}
-                  onClick={() => !isWeekend && !isBlocked && setSelectedDate(isSelected ? null : dateStr)}
+                  onClick={() => !isBlocked && setSelectedDate(isSelected ? null : dateStr)}
                   className="rounded-xl p-1.5 transition-all duration-150 text-left"
                   style={{
                     background: isSelected ? '#0057B8' : isBlocked ? 'rgba(239,68,68,0.08)' : isToday ? '#0057B810' : 'transparent',
                     border: `1.5px solid ${isSelected ? '#0057B8' : isToday ? '#0057B840' : 'transparent'}`,
-                    cursor: isWeekend || isBlocked ? 'default' : 'pointer',
-                    opacity: isWeekend ? 0.2 : 1,
+                    cursor: isBlocked ? 'default' : 'pointer',
                     minHeight: '56px',
                   }}
-                  onMouseEnter={e => { if (!isWeekend && !isBlocked && !isSelected) (e.currentTarget as HTMLElement).style.background = '#0057B810' }}
-                  onMouseLeave={e => { if (!isWeekend && !isBlocked && !isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                  onMouseEnter={e => { if (!isBlocked && !isSelected) (e.currentTarget as HTMLElement).style.background = '#0057B810' }}
+                  onMouseLeave={e => { if (!isBlocked && !isSelected) (e.currentTarget as HTMLElement).style.background = isSelected ? '#0057B8' : isToday ? '#0057B810' : 'transparent' }}
                 >
                   <p className="text-xs font-black mb-1" style={{
-                    color: isSelected ? 'white' : isBlocked ? '#f87171' : isToday ? '#0057B8' : '#a0b8d0'
+                    color: isSelected ? 'white' : isBlocked ? '#f87171' : isToday ? '#0057B8' : isWeekend ? '#6b8ab0' : '#a0b8d0'
                   }}>
                     {day}
                   </p>
@@ -250,6 +249,12 @@ export default function CalendarioPage() {
                           <p className="text-xs font-bold leading-none" style={{ color: isSelected ? 'rgba(255,255,255,0.8)' : '#38bdf8', fontSize: '10px' }}>{truckCount}</p>
                         </div>
                       )}
+                      {motoCount > 0 && (
+                        <div className="flex items-center gap-0.5">
+                          <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: isSelected ? 'rgba(255,255,255,0.7)' : '#a78bfa' }} />
+                          <p className="text-xs font-bold leading-none" style={{ color: isSelected ? 'rgba(255,255,255,0.8)' : '#a78bfa', fontSize: '10px' }}>{motoCount}</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </button>
@@ -266,6 +271,10 @@ export default function CalendarioPage() {
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full" style={{ background: '#38bdf8' }} />
               <p className="text-xs" style={{ color: '#3a5070' }}>Camión</p>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full" style={{ background: '#a78bfa' }} />
+              <p className="text-xs" style={{ color: '#3a5070' }}>Moto</p>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full" style={{ background: 'rgba(239,68,68,0.4)' }} />
