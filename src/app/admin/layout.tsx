@@ -69,6 +69,15 @@ const navItems = [
     ),
   },
   {
+    href: '/admin/cuadrante',
+    label: 'Cuadrante',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 14h18M10 3v18M14 3v18M3 6a3 3 0 013-3h12a3 3 0 013 3v12a3 3 0 01-3 3H6a3 3 0 01-3-3V6z" />
+      </svg>
+    ),
+  },
+  {
     href: '/admin/profesores',
     label: 'Profesores',
     icon: (
