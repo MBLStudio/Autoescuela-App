@@ -104,6 +104,20 @@ export default function FestivosPage() {
       reason: blockReason.trim() || null,
     }).select().single()
     if (newSlot) setBlockedSlots(prev => [...prev, newSlot])
+
+    // Cancelar reservas en ese rango y notificar a los alumnos afectados
+    fetch('/api/cancel-slot-bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        instructorId: instructor.id,
+        date: selectedDate,
+        startTime: blockStart,
+        endTime: blockEnd,
+        reason: blockReason.trim() || null,
+      }),
+    }).catch(() => {})
+
     setBlockStart('')
     setBlockEnd('')
     setBlockReason('')
