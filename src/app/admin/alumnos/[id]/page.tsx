@@ -72,6 +72,13 @@ export default function AlumnoPerfilPage() {
     setEditLimits(false)
   }
 
+  async function toggleExamMode() {
+    if (!student) return
+    const newVal = !student.exam_mode
+    await supabase.from('students').update({ exam_mode: newVal }).eq('id', id)
+    setStudent(prev => prev ? { ...prev, exam_mode: newVal } : prev)
+  }
+
   async function togglePracticeType(type: 'car' | 'truck' | 'moto') {
     if (!student) return
     const has = student.practice_types.includes(type)
@@ -119,6 +126,7 @@ export default function AlumnoPerfilPage() {
   const confirmedBookings = bookings.filter(b => b.status === 'confirmed').length
   const carBookings = bookings.filter(b => b.practice_type === 'car').length
   const truckBookings = bookings.filter(b => b.practice_type === 'truck').length
+  const motoBookings = bookings.filter(b => b.practice_type === 'moto').length
   const lastBooking = bookings.find(b => b.status === 'completed')
 
   return (
@@ -218,6 +226,33 @@ export default function AlumnoPerfilPage() {
               }}>
                 {student.is_active ? 'Activo' : 'Inactivo'}
               </span>
+            </div>
+          </div>
+
+          {/* Modo examen */}
+          <div className="rounded-2xl p-5" style={{ background: '#0d1829', border: `1px solid ${student.exam_mode ? '#f59e0b40' : '#1a2d45'}` }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: student.exam_mode ? '#f59e0b' : '#0057B8' }}>
+                  {student.exam_mode ? '🎯 Modo examen activo' : 'Modo examen'}
+                </p>
+                <p className="text-xs" style={{ color: '#3a5070' }}>
+                  {student.exam_mode
+                    ? 'Puede reservar mañana + tarde el mismo día'
+                    : 'Máximo 1 práctica por día · 5 por semana'}
+                </p>
+              </div>
+              <button
+                onClick={toggleExamMode}
+                className="px-4 py-2 rounded-xl text-xs font-bold transition"
+                style={{
+                  background: student.exam_mode ? '#f59e0b20' : '#0a1220',
+                  border: `1.5px solid ${student.exam_mode ? '#f59e0b' : '#1a2d45'}`,
+                  color: student.exam_mode ? '#f59e0b' : '#3a5070',
+                }}
+              >
+                {student.exam_mode ? 'Desactivar' : 'Activar'}
+              </button>
             </div>
           </div>
 
@@ -427,7 +462,8 @@ export default function AlumnoPerfilPage() {
               {[
                 { label: 'Coche', count: carBookings, color: '#0057B8', total: totalBookings },
                 { label: 'Camión', count: truckBookings, color: '#38bdf8', total: totalBookings },
-              ].map(({ label, count, color, total }) => (
+                { label: 'Moto', count: motoBookings, color: '#a78bfa', total: totalBookings },
+              ].filter(({ count }) => count > 0 || totalBookings === 0).map(({ label, count, color, total }) => (
                 <div key={label}>
                   <div className="flex justify-between text-sm mb-1.5">
                     <span className="font-semibold" style={{ color: '#a0b8d0' }}>{label}</span>
@@ -466,7 +502,7 @@ export default function AlumnoPerfilPage() {
                     onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#0f1c2e'}
                     onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
                   >
-                    <div className="w-1 h-8 rounded-full flex-shrink-0" style={{ background: booking.practice_type === 'car' ? '#0057B8' : '#38bdf8' }} />
+                    <div className="w-1 h-8 rounded-full flex-shrink-0" style={{ background: booking.practice_type === 'car' ? '#0057B8' : booking.practice_type === 'truck' ? '#38bdf8' : '#a78bfa' }} />
                     <div className="flex-1">
                       <p className="text-white text-sm font-bold">
                         {getDayName(booking.practice_date)}, {formatDate(booking.practice_date)}

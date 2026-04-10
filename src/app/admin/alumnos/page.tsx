@@ -137,8 +137,8 @@ export default function AlumnosPage() {
                           key={type}
                           className="text-xs px-2.5 py-1 rounded-full font-bold"
                           style={{
-                            background: type === 'car' ? '#0057B820' : '#38bdf820',
-                            color: type === 'car' ? '#0057B8' : '#38bdf8',
+                            background: type === 'car' ? '#0057B820' : type === 'truck' ? '#38bdf820' : '#a78bfa20',
+                            color: type === 'car' ? '#0057B8' : type === 'truck' ? '#38bdf8' : '#a78bfa',
                           }}
                         >
                           {getPracticeLabel(type)}

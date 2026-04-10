@@ -74,11 +74,15 @@ export function getBreak(type: 'car' | 'truck' | 'moto', subtype?: 'pista' | 'ci
 export function generateTimeSlots(
   practiceType: 'car' | 'truck' | 'moto',
   practiceSubtype?: 'pista' | 'circulacion' | null,
-  customSessions?: { start: string; end: string }[]
+  customSessions?: { start: string; end: string }[],
+  instructorBreakMinutes?: number
 ): string[] {
   const slots: string[] = []
   const duration = getDuration(practiceType, practiceSubtype)
-  const breakTime = getBreak(practiceType, practiceSubtype)
+  // truck+circulacion siempre 30 min; para el resto usa el override del instructor si existe
+  const breakTime = (practiceType === 'truck' && practiceSubtype === 'circulacion')
+    ? 30
+    : (instructorBreakMinutes ?? getBreak(practiceType, practiceSubtype))
 
   const sessions = customSessions ?? [
     { start: '08:00', end: '13:30' },

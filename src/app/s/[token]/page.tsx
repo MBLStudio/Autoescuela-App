@@ -180,15 +180,20 @@ export default function StudentPage() {
     return h * 60 + m
   }
 
+  function getSlotBreak(type: PracticeType, subtype: PracticeSubtype | null): number {
+    if (type === 'truck' && subtype === 'circulacion') return 30
+    return instructor?.break_minutes ?? 10
+  }
+
   function isSlotBlocked(date: string, slotStart: string, slotType: PracticeType, slotSubtype: PracticeSubtype | null): boolean {
     const sStart = toMins(slotStart)
-    const sEnd = sStart + getDuration(slotType, slotSubtype) + getBreak(slotType, slotSubtype)
+    const sEnd = sStart + getDuration(slotType, slotSubtype) + getSlotBreak(slotType, slotSubtype)
 
     // Comprobar overlap con otras reservas
     const overlapsBooking = takenSlots.some(t => {
       if (t.date !== date) return false
       const bStart = toMins(t.start)
-      const bEnd = bStart + getDuration(t.type, t.subtype) + getBreak(t.type, t.subtype)
+      const bEnd = bStart + getDuration(t.type, t.subtype) + getSlotBreak(t.type, t.subtype)
       return bStart < sEnd && sStart < bEnd
     })
 
@@ -212,7 +217,8 @@ export default function StudentPage() {
   }
 
   function getSlotsForDay(date: string, type: PracticeType, subtype: PracticeSubtype | null) {
-    return generateTimeSlots(type, subtype, getInstructorSessions()).map(slot => ({
+    const breakMins = instructor?.break_minutes ?? 10
+    return generateTimeSlots(type, subtype, getInstructorSessions(), breakMins).map(slot => ({
       time: slot,
       taken: isSlotBlocked(date, slot, type, subtype) || isSlotTooSoon(date, slot),
     }))
@@ -286,17 +292,20 @@ export default function StudentPage() {
     setSubmitting(true)
     setSubmitError('')
 
-    // Comprobar que no tenga ya reserva ese mismo día
-    const { data: sameDay } = await supabase
+    // Comprobar límite diario (1 normal, 2 en modo examen)
+    const maxDaily = student.exam_mode ? 2 : 1
+    const { data: sameDayBookings } = await supabase
       .from('bookings')
       .select('id')
       .eq('student_id', student.id)
       .eq('status', 'confirmed')
       .eq('practice_date', selectedDate)
-      .single()
 
-    if (sameDay) {
-      setSubmitError('Ya tienes una práctica reservada ese día.')
+    if (sameDayBookings && sameDayBookings.length >= maxDaily) {
+      const msg = student.exam_mode
+        ? 'Ya tienes 2 prácticas reservadas ese día (límite en modo examen).'
+        : 'Ya tienes una práctica reservada ese día.'
+      setSubmitError(msg)
       setSubmitting(false)
       return
     }
@@ -873,21 +882,24 @@ export default function StudentPage() {
                   const available = slots.filter(s => !s.taken).length
                   const isSelected = dateStr === selectedDate
                   const { from: wFrom, to: wTo } = getWeekBounds(dateStr)
-                  const weekCount = myBookings.filter(b => b.practice_date >= wFrom && b.practice_date <= wTo).length
+                  const weekCount = myBookings.filter(b => b.practice_date >= wFrom && b.practice_date <= wTo && b.status === 'confirmed').length
+                  const dayCount = myBookings.filter(b => b.practice_date === dateStr && b.status === 'confirmed').length
                   const maxWeekly = student?.max_weekly_bookings ?? 5
+                  const maxDaily = student?.exam_mode ? 2 : 1
                   const weekFull = weekCount >= maxWeekly
+                  const dayFull = dayCount >= maxDaily
 
                   return (
                     <button
                       key={dateStr}
-                      onClick={() => { if (!weekFull) { setSelectedDate(dateStr); setStep('time') } }}
-                      disabled={available === 0 || weekFull}
+                      onClick={() => { if (!weekFull && !dayFull) { setSelectedDate(dateStr); setStep('time') } }}
+                      disabled={available === 0 || weekFull || dayFull}
                       className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm transition-all duration-150"
                       style={{
                         background: isSelected ? '#0057B820' : '#0a1220',
                         border: `1.5px solid ${isSelected ? '#0057B8' : '#1a2d45'}`,
-                        opacity: available === 0 ? 0.4 : 1,
-                        cursor: available === 0 ? 'not-allowed' : 'pointer',
+                        opacity: available === 0 || dayFull ? 0.4 : 1,
+                        cursor: available === 0 || dayFull ? 'not-allowed' : 'pointer',
                       }}
                     >
                       <div className="text-left">
@@ -897,11 +909,11 @@ export default function StudentPage() {
                       <span
                         className="text-xs font-semibold px-2.5 py-1 rounded-full"
                         style={{
-                          background: weekFull ? 'rgba(251,191,36,0.1)' : available === 0 ? '#0f1c2e' : '#0057B820',
-                          color: weekFull ? '#fbbf24' : available === 0 ? '#3a5070' : '#0057B8',
+                          background: weekFull ? 'rgba(251,191,36,0.1)' : dayFull ? 'rgba(251,191,36,0.1)' : available === 0 ? '#0f1c2e' : '#0057B820',
+                          color: weekFull ? '#fbbf24' : dayFull ? '#fbbf24' : available === 0 ? '#3a5070' : '#0057B8',
                         }}
                       >
-                        {weekFull ? 'Sem. completa' : available === 0 ? 'Completo' : `${available} huecos`}
+                        {weekFull ? 'Sem. completa' : dayFull ? 'Ya reservado' : available === 0 ? 'Completo' : `${available} huecos`}
                       </span>
                     </button>
                   )

@@ -18,6 +18,7 @@ export interface Instructor {
   afternoon_start: string
   afternoon_end: string
   milestone_counts: number[]
+  break_minutes: number
   jornada: 'full' | 'half'
   created_at: string
 }
@@ -27,6 +28,7 @@ export interface Staff {
   name: string
   email: string
   role: 'admin' | 'instructor' | 'secretary'
+  is_active: boolean
   created_at: string
 }
 
@@ -47,6 +49,7 @@ export interface Student {
   max_weekly_bookings: number
   max_daily_bookings: number
   alert_days_inactive: number
+  exam_mode: boolean
   created_at: string
 }
 

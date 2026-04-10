@@ -187,10 +187,11 @@ export default function NuevoAlumnoPage() {
           <label className="block text-sm font-semibold mb-2" style={{ color: '#a0b8d0' }}>
             Tipo de prácticas <span style={{ color: '#0057B8' }}>*</span>
           </label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             {([
               { value: 'car' as PracticeType, label: '🚗 Coche', color: '#0057B8' },
               { value: 'truck' as PracticeType, label: '🚛 Camión', color: '#38bdf8' },
+              { value: 'moto' as PracticeType, label: '🏍️ Moto', color: '#a78bfa' },
             ]).map(({ value, label, color }) => {
               const selected = practiceTypes.includes(value)
               return (

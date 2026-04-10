@@ -36,6 +36,7 @@ export default function ProfesoresPage() {
     jornada: 'full' as 'full' | 'half',
     schedule_morning: true, morning_start: '08:00', morning_end: '13:30',
     schedule_afternoon: true, afternoon_start: '16:00', afternoon_end: '19:15',
+    break_minutes: 10,
   })
   const [savingSchedule, setSavingSchedule] = useState(false)
 
@@ -321,6 +322,7 @@ export default function ProfesoresPage() {
                             schedule_afternoon: inst.schedule_afternoon ?? true,
                             afternoon_start: (inst.afternoon_start ?? '16:00').substring(0, 5),
                             afternoon_end: (inst.afternoon_end ?? '19:15').substring(0, 5),
+                            break_minutes: inst.break_minutes ?? 10,
                           })
                         }}
                         className="text-xs px-2.5 py-1 rounded-lg font-semibold transition"
@@ -338,6 +340,7 @@ export default function ProfesoresPage() {
                       <span>{inst.jornada === 'half' ? '🕓 Media jornada' : '🕗 Jornada completa'}</span>
                       {(inst.schedule_morning ?? true) && <span>☀️ {(inst.morning_start ?? '08:00').substring(0,5)} – {(inst.morning_end ?? '13:30').substring(0,5)}</span>}
                       {(inst.schedule_afternoon ?? true) && <span>🌆 {(inst.afternoon_start ?? '16:00').substring(0,5)} – {(inst.afternoon_end ?? '19:15').substring(0,5)}</span>}
+                      <span>⏱ Descanso: {inst.break_minutes ?? 10} min</span>
                       <span>🎯 Hitos: {(inst.milestone_counts ?? [5, 10, 15, 20]).join(', ')}</span>
                       <span>🚗 Tipos: {(inst.practice_types ?? ['car']).join(', ')}</span>
                     </div>
@@ -497,6 +500,29 @@ export default function ProfesoresPage() {
                             </div>
                           </div>
                         )}
+                      </div>
+
+                      {/* Descanso entre prácticas */}
+                      <div>
+                        <p className="text-xs font-semibold mb-2" style={{ color: '#6b8ab0' }}>
+                          Descanso entre prácticas
+                          <span className="ml-2 font-normal" style={{ color: '#3a5070' }}>(camión circulación siempre 30 min)</span>
+                        </p>
+                        <div className="flex items-center gap-3">
+                          {[5, 10, 15, 20].map(mins => (
+                            <button key={mins} type="button"
+                              onClick={() => setScheduleForm(f => ({ ...f, break_minutes: mins }))}
+                              className="flex-1 py-2 rounded-xl text-xs font-bold transition"
+                              style={{
+                                background: scheduleForm.break_minutes === mins ? '#0057B820' : '#0d1829',
+                                border: `2px solid ${scheduleForm.break_minutes === mins ? '#0057B8' : '#1a2d45'}`,
+                                color: scheduleForm.break_minutes === mins ? '#0057B8' : '#3a5070',
+                              }}
+                            >
+                              {mins} min
+                            </button>
+                          ))}
+                        </div>
                       </div>
 
                       <button onClick={() => saveSchedule(inst.id)} disabled={savingSchedule}
