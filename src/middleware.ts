@@ -35,16 +35,13 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
   if (path.startsWith('/auth/')) return supabaseResponse
 
-  if (path.startsWith('/admin') && !user) {
+  const protectedPaths = ['/admin', '/instructor', '/secretaria']
+  const isProtected = protectedPaths.some(p => path.startsWith(p))
+
+  if (isProtected && !user) {
     const loginUrl = request.nextUrl.clone()
     loginUrl.pathname = '/'
     return NextResponse.redirect(loginUrl)
-  }
-
-  if (path === '/' && user) {
-    const adminUrl = request.nextUrl.clone()
-    adminUrl.pathname = '/admin'
-    return NextResponse.redirect(adminUrl)
   }
 
   return supabaseResponse

@@ -22,6 +22,11 @@ export default function ProfesoresPage() {
   // Editar horario
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null)
 
+  // Editar tipos de práctica
+  const [editingTypesId, setEditingTypesId] = useState<string | null>(null)
+  const [typesForm, setTypesForm] = useState<string[]>(['car'])
+  const [savingTypes, setSavingTypes] = useState(false)
+
   // Editar hitos
   const [editingMilestonesId, setEditingMilestonesId] = useState<string | null>(null)
   const [milestonesInput, setMilestonesInput] = useState('')
@@ -77,6 +82,15 @@ export default function ProfesoresPage() {
       setInviteSuccess(false)
       setShowInvite(false)
     }, 3000)
+  }
+
+  async function savePracticeTypes(instructorId: string) {
+    if (typesForm.length === 0) return
+    setSavingTypes(true)
+    await supabase.from('instructors').update({ practice_types: typesForm }).eq('id', instructorId)
+    setInstructors(prev => prev.map(i => i.id === instructorId ? { ...i, practice_types: typesForm as any } : i))
+    setEditingTypesId(null)
+    setSavingTypes(false)
   }
 
   async function saveMilestones(instructorId: string) {
@@ -256,6 +270,7 @@ export default function ProfesoresPage() {
             {instructors.map(inst => {
               const isEditing = editingScheduleId === inst.id
               const isEditingMilestones = editingMilestonesId === inst.id
+              const isEditingTypes = editingTypesId === inst.id
               return (
                 <div key={inst.id} className="px-5 py-4 space-y-3">
                   <div className="flex items-center gap-4">
@@ -269,8 +284,21 @@ export default function ProfesoresPage() {
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
                         onClick={() => {
+                          setEditingTypesId(isEditingTypes ? null : inst.id)
+                          setEditingMilestonesId(null)
+                          setEditingScheduleId(null)
+                          setTypesForm(inst.practice_types ?? ['car'])
+                        }}
+                        className="text-xs px-2.5 py-1 rounded-lg font-semibold transition"
+                        style={{ color: '#6b8ab0', background: '#0a1220', border: '1px solid #1a2d45' }}
+                      >
+                        {isEditingTypes ? 'Cancelar' : '🚗 Tipos'}
+                      </button>
+                      <button
+                        onClick={() => {
                           setEditingMilestonesId(isEditingMilestones ? null : inst.id)
                           setEditingScheduleId(null)
+                          setEditingTypesId(null)
                           setMilestonesError('')
                           setMilestonesInput((inst.milestone_counts ?? [5, 10, 15, 20]).join(', '))
                         }}
@@ -283,6 +311,7 @@ export default function ProfesoresPage() {
                         onClick={() => {
                           setEditingScheduleId(isEditing ? null : inst.id)
                           setEditingMilestonesId(null)
+                          setEditingTypesId(null)
                           setScheduleForm({
                             schedule_morning: inst.schedule_morning ?? true,
                             morning_start: (inst.morning_start ?? '08:00').substring(0, 5),
@@ -301,12 +330,50 @@ export default function ProfesoresPage() {
                     </div>
                   </div>
 
-                  {/* Resumen horario + hitos */}
-                  {!isEditing && !isEditingMilestones && (
+                  {/* Resumen horario + hitos + tipos */}
+                  {!isEditing && !isEditingMilestones && !isEditingTypes && (
                     <div className="flex flex-wrap gap-3 text-xs" style={{ color: '#3a5070' }}>
                       {(inst.schedule_morning ?? true) && <span>☀️ {(inst.morning_start ?? '08:00').substring(0,5)} – {(inst.morning_end ?? '13:30').substring(0,5)}</span>}
                       {(inst.schedule_afternoon ?? true) && <span>🌆 {(inst.afternoon_start ?? '16:00').substring(0,5)} – {(inst.afternoon_end ?? '19:15').substring(0,5)}</span>}
                       <span>🎯 Hitos: {(inst.milestone_counts ?? [5, 10, 15, 20]).join(', ')}</span>
+                      <span>🚗 Tipos: {(inst.practice_types ?? ['car']).join(', ')}</span>
+                    </div>
+                  )}
+
+                  {/* Formulario tipos de práctica */}
+                  {isEditingTypes && (
+                    <div className="rounded-xl p-4 space-y-3" style={{ background: '#0a1220', border: '1px solid #1a2d45' }}>
+                      <p className="text-xs font-semibold" style={{ color: '#6b8ab0' }}>Tipos de práctica que imparte este profesor</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {([
+                          { value: 'car', label: '🚗 Coche', color: '#0057B8' },
+                          { value: 'truck', label: '🚛 Camión', color: '#38bdf8' },
+                          { value: 'moto', label: '🏍️ Moto', color: '#a78bfa' },
+                        ] as const).map(({ value, label, color }) => {
+                          const selected = typesForm.includes(value)
+                          return (
+                            <button key={value} type="button"
+                              onClick={() => setTypesForm(prev => selected ? prev.filter(t => t !== value) : [...prev, value])}
+                              className="py-2.5 rounded-xl text-xs font-bold transition"
+                              style={{
+                                background: selected ? `${color}20` : '#0d1829',
+                                border: `2px solid ${selected ? color : '#1a2d45'}`,
+                                color: selected ? color : '#3a5070',
+                              }}
+                            >
+                              {label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      <button
+                        onClick={() => savePracticeTypes(inst.id)}
+                        disabled={savingTypes || typesForm.length === 0}
+                        className="w-full py-2.5 rounded-xl text-sm font-bold text-white transition"
+                        style={{ background: savingTypes || typesForm.length === 0 ? '#1a2d45' : '#0057B8' }}
+                      >
+                        {savingTypes ? 'Guardando...' : 'Guardar tipos'}
+                      </button>
                     </div>
                   )}
 

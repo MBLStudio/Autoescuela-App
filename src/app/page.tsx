@@ -16,12 +16,19 @@ export default function LoginPage() {
   async function handleLogin() {
     setLoading(true)
     setError('')
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
+    const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error || !authData.user) {
       setError('Email o contraseña incorrectos')
       setLoading(false)
       return
     }
+    const { data: staff } = await supabase
+      .from('staff')
+      .select('role')
+      .eq('id', authData.user.id)
+      .single()
+    if (staff?.role === 'secretary') return router.push('/secretaria')
+    if (staff?.role === 'instructor') return router.push('/instructor')
     router.push('/admin')
   }
 

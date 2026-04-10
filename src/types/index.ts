@@ -9,6 +9,8 @@ export interface Instructor {
   id: string
   email: string
   name: string
+  user_id: string | null
+  practice_types: PracticeType[]
   schedule_morning: boolean
   schedule_afternoon: boolean
   morning_start: string
@@ -16,6 +18,14 @@ export interface Instructor {
   afternoon_start: string
   afternoon_end: string
   milestone_counts: number[]
+  created_at: string
+}
+
+export interface Staff {
+  id: string
+  name: string
+  email: string
+  role: 'admin' | 'instructor' | 'secretary'
   created_at: string
 }
 
