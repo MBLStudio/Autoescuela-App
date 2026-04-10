@@ -16,13 +16,15 @@ const PICKUP_LOCATIONS = [
 
 function getNextWorkingDays(count: number): Date[] {
   const days: Date[] = []
-  const current = new Date()
-  current.setHours(0, 0, 0, 0)
-  let checked = 0
-  while (days.length < count && checked < 60) {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const limit = new Date(today)
+  limit.setDate(limit.getDate() + count)
+
+  const current = new Date(today)
+  while (current <= limit) {
     days.push(new Date(current))
     current.setDate(current.getDate() + 1)
-    checked++
   }
   return days
 }
