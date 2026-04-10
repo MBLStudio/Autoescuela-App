@@ -33,6 +33,7 @@ export default function ProfesoresPage() {
   const [savingMilestones, setSavingMilestones] = useState(false)
   const [milestonesError, setMilestonesError] = useState('')
   const [scheduleForm, setScheduleForm] = useState({
+    jornada: 'full' as 'full' | 'half',
     schedule_morning: true, morning_start: '08:00', morning_end: '13:30',
     schedule_afternoon: true, afternoon_start: '16:00', afternoon_end: '19:15',
   })
@@ -313,6 +314,7 @@ export default function ProfesoresPage() {
                           setEditingMilestonesId(null)
                           setEditingTypesId(null)
                           setScheduleForm({
+                            jornada: inst.jornada ?? 'full',
                             schedule_morning: inst.schedule_morning ?? true,
                             morning_start: (inst.morning_start ?? '08:00').substring(0, 5),
                             morning_end: (inst.morning_end ?? '13:30').substring(0, 5),
@@ -333,6 +335,7 @@ export default function ProfesoresPage() {
                   {/* Resumen horario + hitos + tipos */}
                   {!isEditing && !isEditingMilestones && !isEditingTypes && (
                     <div className="flex flex-wrap gap-3 text-xs" style={{ color: '#3a5070' }}>
+                      <span>{inst.jornada === 'half' ? '🕓 Media jornada' : '🕗 Jornada completa'}</span>
                       {(inst.schedule_morning ?? true) && <span>☀️ {(inst.morning_start ?? '08:00').substring(0,5)} – {(inst.morning_end ?? '13:30').substring(0,5)}</span>}
                       {(inst.schedule_afternoon ?? true) && <span>🌆 {(inst.afternoon_start ?? '16:00').substring(0,5)} – {(inst.afternoon_end ?? '19:15').substring(0,5)}</span>}
                       <span>🎯 Hitos: {(inst.milestone_counts ?? [5, 10, 15, 20]).join(', ')}</span>
@@ -413,6 +416,35 @@ export default function ProfesoresPage() {
                   {/* Formulario horario */}
                   {isEditing && (
                     <div className="rounded-xl p-4 space-y-4" style={{ background: '#0a1220', border: '1px solid #1a2d45' }}>
+
+                      {/* Tipo de jornada */}
+                      <div>
+                        <p className="text-xs font-semibold mb-2" style={{ color: '#6b8ab0' }}>Tipo de jornada</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {([
+                            { value: 'full', label: '🕗 Jornada completa', desc: '~40h semanales' },
+                            { value: 'half', label: '🕓 Media jornada', desc: '~20h semanales' },
+                          ] as const).map(({ value, label, desc }) => (
+                            <button key={value} type="button"
+                              onClick={() => setScheduleForm(f => ({
+                                ...f,
+                                jornada: value,
+                                // Media jornada: desactiva tarde automáticamente
+                                schedule_afternoon: value === 'half' ? false : f.schedule_afternoon,
+                              }))}
+                              className="py-2.5 px-3 rounded-xl text-left transition"
+                              style={{
+                                background: scheduleForm.jornada === value ? '#0057B820' : '#0d1829',
+                                border: `2px solid ${scheduleForm.jornada === value ? '#0057B8' : '#1a2d45'}`,
+                              }}
+                            >
+                              <p className="text-xs font-bold" style={{ color: scheduleForm.jornada === value ? '#0057B8' : '#6b8ab0' }}>{label}</p>
+                              <p className="text-xs mt-0.5" style={{ color: '#3a5070' }}>{desc}</p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
                       {/* Mañana */}
                       <div>
                         <div className="flex items-center gap-2 mb-2">

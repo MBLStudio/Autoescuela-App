@@ -18,6 +18,7 @@ export interface Instructor {
   afternoon_start: string
   afternoon_end: string
   milestone_counts: number[]
+  jornada: 'full' | 'half'
   created_at: string
 }
 
