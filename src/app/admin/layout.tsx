@@ -151,7 +151,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 min-h-0 overflow-y-auto scroll-smooth px-3 py-4 space-y-1">
           {navItems.map(item => {
             const isActive = pathname === item.href
             return (

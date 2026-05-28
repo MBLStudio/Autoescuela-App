@@ -44,11 +44,9 @@ export default function ProfesoresPage() {
 
   async function fetchInstructors() {
     setLoading(true)
-    const { data } = await supabase
-      .from('instructors')
-      .select('*')
-      .order('created_at', { ascending: true })
-    if (data) setInstructors(data)
+    const res = await fetch('/api/profesores/list')
+    const json = await res.json()
+    if (json.instructors) setInstructors(json.instructors)
     setLoading(false)
   }
 
@@ -215,10 +213,6 @@ export default function ProfesoresPage() {
                   onFocus={e => e.target.style.borderColor = '#0057B8'}
                   onBlur={e => e.target.style.borderColor = '#1a2d45'}
                 />
-              </div>
-
-              <div className="rounded-xl px-3 py-2.5 text-xs" style={{ background: '#0a1220', border: '1px solid #1a2d45', color: '#6b8ab0' }}>
-                El profesor accederá con su email y esta contraseña. Pásasela por WhatsApp o en persona.
               </div>
 
               {inviteError && (
