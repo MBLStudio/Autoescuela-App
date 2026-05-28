@@ -69,7 +69,7 @@ export default function ProfesoresPage() {
     const data = await res.json()
 
     if (!res.ok || data.error) {
-      setInviteError(data.error ?? 'No se pudo enviar la invitación')
+      setInviteError(data.error ?? 'No se pudo crear la cuenta')
       setInviting(false)
       return
     }
@@ -140,7 +140,7 @@ export default function ProfesoresPage() {
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
-          Invitar profesor
+          Nuevo profesor
         </button>
       </div>
 
@@ -148,7 +148,7 @@ export default function ProfesoresPage() {
       {showInvite && (
         <div className="rounded-2xl p-5 mb-6 space-y-4" style={{ background: '#0d1829', border: '1px solid #1a2d45' }}>
           <div className="flex items-center justify-between">
-            <p className="text-white font-bold">Invitar nuevo profesor</p>
+            <p className="text-white font-bold">Nuevo profesor</p>
             <button
               onClick={() => setShowInvite(false)}
               style={{ color: '#6b8ab0' }}
@@ -243,7 +243,7 @@ export default function ProfesoresPage() {
                   onMouseEnter={e => { if (!inviting) (e.currentTarget as HTMLElement).style.background = '#004494' }}
                   onMouseLeave={e => { if (!inviting) (e.currentTarget as HTMLElement).style.background = '#0057B8' }}
                 >
-                  {inviting ? 'Enviando...' : 'Enviar invitación'}
+                  {inviting ? 'Creando...' : 'Crear cuenta'}
                 </button>
               </div>
             </>

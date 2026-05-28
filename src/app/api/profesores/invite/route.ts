@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
 
   if (dbError) {
     console.error('Error creando instructor en DB:', dbError)
+    return NextResponse.json({ error: 'Usuario creado pero error al guardar en BD: ' + dbError.message }, { status: 500 })
   }
 
   return NextResponse.json({ ok: true })
