@@ -2,21 +2,18 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { generateStudentToken } from '@/lib/utils'
 import type { PracticeType } from '@/types'
 import Link from 'next/link'
 
 export default function SecretariaNuevoAlumnoPage() {
   const router = useRouter()
-  const supabase = createClient()
 
   const [dni, setDni] = useState('')
   const [fullName, setFullName] = useState('')
-  const [orderNumber, setOrderNumber] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [practiceTypes, setPracticeTypes] = useState<PracticeType[]>(['car'])
+  const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -27,8 +24,8 @@ export default function SecretariaNuevoAlumnoPage() {
   }
 
   async function handleSubmit() {
-    if (!dni || !fullName || !orderNumber) {
-      setError('DNI, nombre y número de orden son obligatorios')
+    if (!dni || !fullName) {
+      setError('Nombre y DNI son obligatorios')
       return
     }
     if (practiceTypes.length === 0) {
@@ -39,29 +36,22 @@ export default function SecretariaNuevoAlumnoPage() {
     setLoading(true)
     setError('')
 
-    const token = generateStudentToken()
-    const num = parseInt(orderNumber).toString().padStart(3, '0')
-    const loginCode = `Alumno-${num}`
-    const loginPin = num
-
-    // Sin instructor_id — quedará en el tablón para que un instructor lo elija
-    const { error: insertError } = await supabase.from('students').insert({
-      instructor_id: null,
-      dni: dni.toUpperCase().trim(),
-      full_name: fullName.trim(),
-      order_number: parseInt(orderNumber),
-      phone: phone.trim() || null,
-      email: email.trim() || null,
-      practice_types: practiceTypes,
-      token,
-      login_code: loginCode,
-      login_pin: loginPin,
+    const res = await fetch('/api/tablon/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fullName: fullName.trim(),
+        dni,
+        phone,
+        email,
+        practiceTypes,
+        notes,
+      }),
     })
+    const data = await res.json()
 
-    if (insertError) {
-      setError(insertError.code === '23505'
-        ? 'Ya existe un alumno con ese DNI o número de orden'
-        : 'Error al crear el alumno. Inténtalo de nuevo.')
+    if (!res.ok || data.error) {
+      setError(data.error ?? 'Error al crear el alumno. Inténtalo de nuevo.')
       setLoading(false)
       return
     }
@@ -121,19 +111,6 @@ export default function SecretariaNuevoAlumnoPage() {
 
         <div>
           <label className="block text-sm font-semibold mb-1.5" style={{ color: '#a0b8d0' }}>
-            Número de orden <span style={{ color: '#0057B8' }}>*</span>
-          </label>
-          <input type="number" value={orderNumber} onChange={e => setOrderNumber(e.target.value)}
-            placeholder="1" min={1}
-            className="w-full rounded-xl px-4 py-3 text-white text-sm outline-none"
-            style={{ background: '#0a1220', border: '1.5px solid #1a2d45' }}
-            onFocus={e => e.target.style.borderColor = '#0057B8'}
-            onBlur={e => e.target.style.borderColor = '#1a2d45'}
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-semibold mb-1.5" style={{ color: '#a0b8d0' }}>
             Teléfono <span className="font-normal text-xs" style={{ color: '#3a5070' }}>(opcional)</span>
           </label>
           <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
@@ -183,6 +160,23 @@ export default function SecretariaNuevoAlumnoPage() {
               )
             })}
           </div>
+        </div>
+
+        {/* Notas opcionales */}
+        <div>
+          <label className="block text-sm font-semibold mb-1.5" style={{ color: '#a0b8d0' }}>
+            Notas para el instructor <span className="font-normal text-xs" style={{ color: '#3a5070' }}>(opcional)</span>
+          </label>
+          <textarea
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            placeholder="Ej: prefiere mañanas, trabaja por las tardes, zona norte de la ciudad..."
+            rows={3}
+            className="w-full rounded-xl px-4 py-3 text-white text-sm outline-none resize-none"
+            style={{ background: '#0a1220', border: '1.5px solid #1a2d45' }}
+            onFocus={e => e.target.style.borderColor = '#0057B8'}
+            onBlur={e => e.target.style.borderColor = '#1a2d45'}
+          />
         </div>
 
         {error && (

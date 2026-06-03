@@ -34,7 +34,7 @@ export interface Staff {
 
 export interface Student {
   id: string
-  instructor_id: string
+  instructor_id: string | null
   dni: string
   full_name: string
   order_number: number
@@ -50,6 +50,7 @@ export interface Student {
   max_daily_bookings: number
   alert_days_inactive: number
   exam_mode: boolean
+  notes: string | null
   created_at: string
 }
 
