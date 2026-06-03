@@ -98,7 +98,16 @@ export default function StudentPage() {
 
     setStudent(data)
     setSelectedType(data.practice_types[0])
-    await Promise.all([fetchMyBookings(data.id), fetchTakenSlots(data.instructor_id), fetchAllBookings(data.id), fetchExams(data.id), fetchBlockedSlots(data.instructor_id), fetchInstructor(data.instructor_id)])
+    await Promise.all([
+      fetchMyBookings(data.id),
+      fetchAllBookings(data.id),
+      fetchExams(data.id),
+      ...(data.instructor_id ? [
+        fetchTakenSlots(data.instructor_id),
+        fetchBlockedSlots(data.instructor_id),
+        fetchInstructor(data.instructor_id),
+      ] : []),
+    ])
     setLoading(false)
   }
 
@@ -283,7 +292,7 @@ export default function StudentPage() {
     }).catch(() => {})
 
     setCancellingId(null)
-    await Promise.all([fetchMyBookings(student!.id), fetchTakenSlots(student!.instructor_id)])
+    await Promise.all([fetchMyBookings(student!.id), ...(student!.instructor_id ? [fetchTakenSlots(student!.instructor_id)] : [])])
     setCancelling(false)
   }
 
@@ -397,7 +406,11 @@ export default function StudentPage() {
       }),
     }).catch(() => {})
 
-    await Promise.all([fetchMyBookings(student.id), fetchTakenSlots(student.instructor_id), fetchAllBookings(student.id)])
+    await Promise.all([
+      fetchMyBookings(student.id),
+      fetchAllBookings(student.id),
+      ...(student.instructor_id ? [fetchTakenSlots(student.instructor_id)] : []),
+    ])
     setStep('success')
     setSubmitting(false)
   }
