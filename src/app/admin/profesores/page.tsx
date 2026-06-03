@@ -19,6 +19,10 @@ export default function ProfesoresPage() {
   const [inviteError, setInviteError] = useState('')
   const [inviteSuccess, setInviteSuccess] = useState(false)
 
+  // Eliminar
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
   // Editar horario
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null)
 
@@ -48,6 +52,20 @@ export default function ProfesoresPage() {
     const json = await res.json()
     if (json.instructors) setInstructors(json.instructors)
     setLoading(false)
+  }
+
+  async function handleDelete(id: string) {
+    setDeleting(true)
+    const res = await fetch('/api/profesores/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    if (res.ok) {
+      setInstructors(prev => prev.filter(i => i.id !== id))
+    }
+    setConfirmDeleteId(null)
+    setDeleting(false)
   }
 
   async function handleInvite() {
@@ -325,6 +343,37 @@ export default function ProfesoresPage() {
                         {isEditing ? 'Cancelar' : '⏰ Horario'}
                       </button>
                       <span className="text-xs px-2.5 py-1 rounded-full font-bold" style={{ background: 'rgba(52,211,153,0.1)', color: '#34d399' }}>Activo</span>
+                      {confirmDeleteId === inst.id ? (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleDelete(inst.id)}
+                            disabled={deleting}
+                            className="text-xs px-2.5 py-1 rounded-lg font-semibold transition"
+                            style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }}
+                          >
+                            {deleting ? '...' : '¿Eliminar?'}
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="text-xs px-2 py-1 rounded-lg font-semibold transition"
+                            style={{ color: '#6b8ab0', background: '#0a1220', border: '1px solid #1a2d45' }}
+                          >
+                            No
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDeleteId(inst.id)}
+                          className="p-1.5 rounded-lg transition"
+                          style={{ color: '#3a5070' }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#f87171'; (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.1)' }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#3a5070'; (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   </div>
 
