@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { createStudentClient } from '@/lib/supabase/client'
 import { formatDate, formatTime, getDayName, toDateString, getPracticeLabel, generateTimeSlots, getDuration, getBreak } from '@/lib/utils'
 import type { Student, Booking, PracticeType, PracticeSubtype, Exam, Instructor } from '@/types'
 
@@ -54,7 +54,7 @@ const STEP_LABELS = ['Tipo', 'Día', 'Hora', 'Confirmar']
 export default function StudentPage() {
   const params = useParams()
   const token = params.token as string
-  const supabase = createClient()
+  const supabase = useMemo(() => createStudentClient(token), [token])
 
   const [student, setStudent] = useState<Student | null>(null)
   const [instructor, setInstructor] = useState<Instructor | null>(null)
