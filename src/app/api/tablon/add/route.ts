@@ -1,15 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getSessionUser, isAdminOrSecretary } from '@/lib/auth'
 
 function generateToken() {
   return crypto.randomUUID().replace(/-/g, '').substring(0, 16)
 }
 
 export async function POST(req: NextRequest) {
+  const user = await getSessionUser()
+  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  if (!isAdminOrSecretary(user)) return NextResponse.json({ error: 'Prohibido' }, { status: 403 })
+
   const { fullName, dni, phone, email, practiceTypes, notes } = await req.json()
 
   if (!fullName?.trim() || !dni?.trim() || !practiceTypes?.length) {
     return NextResponse.json({ error: 'Nombre, DNI y tipo de prácticas son obligatorios' }, { status: 400 })
+  }
+
+  const dniRegex = /^[0-9]{8}[A-Z]$/i
+  if (!dniRegex.test(dni.trim())) {
+    return NextResponse.json({ error: 'El DNI debe tener 8 números seguidos de una letra (ej: 12345678A)' }, { status: 400 })
+  }
+
+  if (email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    return NextResponse.json({ error: 'El formato del email no es válido' }, { status: 400 })
   }
 
   const supabaseAdmin = createClient(

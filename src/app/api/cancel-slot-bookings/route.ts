@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
+import { getSessionUser, isAdminOrInstructor, isAdmin } from '@/lib/auth'
 import {
   APP_URL, FROM_EMAIL,
   emailWrapper, infoCard, infoRow, ctaButton,
@@ -46,7 +47,15 @@ function buildCancelEmail(
 }
 
 export async function POST(req: NextRequest) {
-  const { instructorId, date, startTime, endTime, reason } = await req.json()
+  const sessionUser = await getSessionUser()
+  if (!sessionUser) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  if (!isAdminOrInstructor(sessionUser)) return NextResponse.json({ error: 'Prohibido' }, { status: 403 })
+
+  const { instructorId: bodyInstructorId, date, startTime, endTime, reason } = await req.json()
+
+  // Profesores solo pueden cancelar sus propios huecos; admin puede especificar cualquier instructor
+  const instructorId = isAdmin(sessionUser) ? bodyInstructorId : sessionUser.id
+
   if (!instructorId || !date || !startTime || !endTime) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }

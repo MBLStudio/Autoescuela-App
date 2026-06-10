@@ -124,7 +124,7 @@ export default function AdminSecretariaPage() {
               {[
                 { label: 'Nombre completo', value: name, setter: setName, type: 'text', placeholder: 'María López' },
                 { label: 'Email', value: email, setter: setEmail, type: 'email', placeholder: 'secretaria@autoescuela.com' },
-                { label: 'Contraseña', value: password, setter: setPassword, type: 'password', placeholder: 'Mínimo 6 caracteres' },
+                { label: 'Contraseña', value: password, setter: setPassword, type: 'password', placeholder: 'Mínimo 8 caracteres' },
               ].map(({ label, value, setter, type, placeholder }) => (
                 <div key={label}>
                   <label className="block text-xs font-semibold mb-1.5" style={{ color: '#a0b8d0' }}>{label}</label>

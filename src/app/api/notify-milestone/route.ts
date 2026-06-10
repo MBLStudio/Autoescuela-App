@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { APP_URL, FROM_EMAIL, ctaButton } from '@/lib/email'
+import { getSessionUser, isAdminOrInstructor } from '@/lib/auth'
 
 // Logo SVG inline (camión)
 const LOGO_SVG = `<svg width="34" height="34" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -119,6 +120,10 @@ function buildMilestoneEmail(studentName: string, count: number, token: string):
 
 export async function POST(req: NextRequest) {
   try {
+    const sessionUser = await getSessionUser()
+    if (!sessionUser) return NextResponse.json({ sent: false, error: 'No autorizado' }, { status: 401 })
+    if (!isAdminOrInstructor(sessionUser)) return NextResponse.json({ sent: false, error: 'Prohibido' }, { status: 403 })
+
     const { studentId, instructorId } = await req.json()
 
     if (!studentId || !instructorId) {

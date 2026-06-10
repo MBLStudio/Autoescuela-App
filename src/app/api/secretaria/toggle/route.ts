@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getSessionUser, isAdmin } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
+  const user = await getSessionUser()
+  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  if (!isAdmin(user)) return NextResponse.json({ error: 'Prohibido' }, { status: 403 })
+
   const { id, is_active } = await req.json()
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
 

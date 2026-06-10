@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getSessionUser, isAdminOrInstructor } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
-  const { studentId, instructorId } = await req.json()
+  const user = await getSessionUser()
+  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  if (!isAdminOrInstructor(user)) return NextResponse.json({ error: 'Prohibido' }, { status: 403 })
 
-  if (!studentId || !instructorId) {
-    return NextResponse.json({ error: 'studentId e instructorId son obligatorios' }, { status: 400 })
+  const { studentId } = await req.json()
+  // El instructorId siempre viene de la sesión, nunca del body
+  const instructorId = user.id
+
+  if (!studentId) {
+    return NextResponse.json({ error: 'studentId es obligatorio' }, { status: 400 })
   }
 
   const supabaseAdmin = createClient(

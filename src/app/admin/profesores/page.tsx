@@ -225,7 +225,7 @@ export default function ProfesoresPage() {
                   type="password"
                   value={invitePassword}
                   onChange={e => setInvitePassword(e.target.value)}
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Mínimo 8 caracteres"
                   className="w-full rounded-xl px-3 py-2.5 text-white text-sm outline-none transition-all"
                   style={{ background: '#0a1220', border: '1.5px solid #1a2d45' }}
                   onFocus={e => e.target.style.borderColor = '#0057B8'}
