@@ -6,9 +6,13 @@ import { formatDate, getPracticeLabel } from '@/lib/utils'
 import type { Student } from '@/types'
 import Link from 'next/link'
 
+interface StudentWithInstructor extends Student {
+  instructor: { name: string } | null
+}
+
 export default function AlumnosPage() {
   const supabase = createClient()
-  const [students, setStudents] = useState<Student[]>([])
+  const [students, setStudents] = useState<StudentWithInstructor[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [copied, setCopied] = useState<string | null>(null)
@@ -19,10 +23,10 @@ export default function AlumnosPage() {
     setLoading(true)
     const { data } = await supabase
       .from('students')
-      .select('*')
+      .select('*, instructor:instructors(name)')
       .eq('is_active', true)
       .order('order_number', { ascending: true })
-    if (data) setStudents(data)
+    if (data) setStudents(data as StudentWithInstructor[])
     setLoading(false)
   }
 
@@ -101,7 +105,7 @@ export default function AlumnosPage() {
           <table className="w-full">
             <thead>
               <tr style={{ borderBottom: '1px solid #1a2d45' }}>
-                {['#', 'Alumno', 'DNI', 'Prácticas', 'Alta', ''].map(h => (
+                {['#', 'Alumno', 'DNI', 'Prácticas', 'Instructor', 'Alta', ''].map(h => (
                   <th key={h} className="text-left px-5 py-4 text-xs font-bold uppercase tracking-wider" style={{ color: '#3a5070' }}>{h}</th>
                 ))}
               </tr>
@@ -145,6 +149,17 @@ export default function AlumnosPage() {
                         </span>
                       ))}
                     </div>
+                  </td>
+                  <td className="px-5 py-4">
+                    {student.instructor ? (
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-lg" style={{ background: 'rgba(0,87,184,0.1)', color: '#60a5fa' }}>
+                        {student.instructor.name}
+                      </span>
+                    ) : (
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-lg" style={{ background: '#0a1220', color: '#3a5070' }}>
+                        Sin asignar
+                      </span>
+                    )}
                   </td>
                   <td className="px-5 py-4 text-sm" style={{ color: '#3a5070' }}>
                     {formatDate(student.created_at.split('T')[0])}

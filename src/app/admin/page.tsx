@@ -20,7 +20,7 @@ export default function AdminPage() {
     setLoading(true)
     const { data, error } = await supabase
       .from('bookings')
-      .select('*, student:students(full_name, order_number, practice_types)')
+      .select('*, student:students(full_name, order_number, practice_types), instructor:instructors(name)')
       .eq('practice_date', today)
       .neq('status', 'cancelled')
       .order('start_time', { ascending: true })
@@ -164,6 +164,11 @@ export default function AdminPage() {
                   <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusColor(booking.status)}`}>
                     {getStatusLabel(booking.status)}
                   </span>
+                  {(booking as any).instructor?.name && (
+                    <span className="text-xs" style={{ color: '#3a5070' }}>
+                      · {(booking as any).instructor.name}
+                    </span>
+                  )}
                 </div>
               </div>
 

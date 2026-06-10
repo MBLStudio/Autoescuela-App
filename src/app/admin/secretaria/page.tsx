@@ -39,8 +39,8 @@ export default function AdminSecretariaPage() {
       setError('Nombre, email y contraseña son obligatorios')
       return
     }
-    if (password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres')
+    if (password.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres')
       return
     }
     setSaving(true)
