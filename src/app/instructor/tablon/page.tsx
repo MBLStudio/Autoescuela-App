@@ -1,11 +1,38 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { formatDate, getDayName, getPracticeLabel } from '@/lib/utils'
-import type { Student, PracticeType } from '@/types'
+import { getPracticeLabel } from '@/lib/utils'
+import type { PracticeType } from '@/types'
 
-type PendingStudent = Student & { assigned_at: string | null }
+interface QueueStudent {
+  id: string
+  full_name: string
+  dni: string
+  order_number: number
+  phone: string | null
+  practice_types: PracticeType[]
+  notes: string | null
+  created_at: string
+}
+
+function timeAgo(dateStr: string): string {
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
+  if (diff < 60) return 'Hace un momento'
+  if (diff < 3600) return `Hace ${Math.floor(diff / 60)} min`
+  if (diff < 86400) return `Hace ${Math.floor(diff / 3600)}h`
+  return `Hace ${Math.floor(diff / 86400)} día${Math.floor(diff / 86400) > 1 ? 's' : ''}`
+}
+
+function isRecent(dateStr: string): boolean {
+  return Date.now() - new Date(dateStr).getTime() < 2 * 60 * 60 * 1000
+}
+
+const TYPE_COLORS: Record<PracticeType, { bg: string; color: string; emoji: string }> = {
+  car:   { bg: 'rgba(0,87,184,0.15)',    color: '#0057B8', emoji: '🚗' },
+  truck: { bg: 'rgba(56,189,248,0.15)',  color: '#38bdf8', emoji: '🚛' },
+  moto:  { bg: 'rgba(167,139,250,0.15)', color: '#a78bfa', emoji: '🏍️' },
+}
 
 export default function TablonPage() {
   const supabase = createClient()
@@ -13,97 +40,98 @@ export default function TablonPage() {
   const [instructorId, setInstructorId] = useState<string | null>(null)
   const [instructorName, setInstructorName] = useState('')
   const [instructorTypes, setInstructorTypes] = useState<PracticeType[]>([])
-  const [students, setStudents] = useState<PendingStudent[]>([])
+  const [students, setStudents] = useState<QueueStudent[]>([])
   const [loading, setLoading] = useState(true)
-  const [claiming, setClaimingId] = useState<string | null>(null)
   const [filterType, setFilterType] = useState<PracticeType | 'all'>('all')
+  const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [claiming, setClaiming] = useState(false)
+  const refreshRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  useEffect(() => { init() }, [])
+  useEffect(() => {
+    init()
+    return () => { if (refreshRef.current) clearInterval(refreshRef.current) }
+  }, [])
 
   async function init() {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) { setLoading(false); return }
+
     const { data: instructor } = await supabase
       .from('instructors')
       .select('id, name, practice_types')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single()
+
     if (instructor) {
       setInstructorId(instructor.id)
       setInstructorName(instructor.name)
       setInstructorTypes(instructor.practice_types ?? ['car'])
-      fetchPendingStudents(instructor.practice_types ?? ['car'])
+      await loadQueue()
+      refreshRef.current = setInterval(loadQueue, 30000)
     } else {
       setLoading(false)
     }
   }
 
-  async function fetchPendingStudents(types: PracticeType[]) {
-    setLoading(true)
-    // Alumnos activos sin instructor asignado o pendientes de asignación
-    const { data } = await supabase
-      .from('students')
-      .select('*')
-      .is('instructor_id', null)
-      .eq('is_active', true)
-      .order('created_at', { ascending: true })
-
-    if (data) {
-      // Filtrar solo los que tienen al menos un tipo compatible con el instructor
-      const compatible = data.filter(s =>
-        (s.practice_types as PracticeType[]).some(t => types.includes(t))
-      )
-      setStudents(compatible as PendingStudent[])
-    }
+  async function loadQueue() {
+    const res = await fetch('/api/tablon/list')
+    const json = await res.json()
+    if (json.students) setStudents(json.students)
     setLoading(false)
   }
 
-  async function claimStudent(student: Student) {
-    if (!instructorId) return
-    setClaimingId(student.id)
-
-    await supabase
-      .from('students')
-      .update({ instructor_id: instructorId })
-      .eq('id', student.id)
-
-    // Email al alumno
-    fetch('/api/notify-claimed', {
+  async function handleClaim(studentId: string) {
+    setClaiming(true)
+    const res = await fetch('/api/tablon/claim', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        studentId: student.id,
-        instructorName,
-      }),
-    }).catch(() => {})
-
-    setStudents(prev => prev.filter(s => s.id !== student.id))
-    setClaimingId(null)
+      body: JSON.stringify({ studentId }),
+    })
+    if (res.ok) {
+      const { instructorName: name } = await res.json()
+      setStudents(prev => prev.filter(s => s.id !== studentId))
+      if (name || instructorName) {
+        fetch('/api/notify-claimed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ studentId, instructorName: name ?? instructorName }),
+        }).catch(() => {})
+      }
+    }
+    setConfirmId(null)
+    setClaiming(false)
   }
+
+  // Filtrar por tipos compatibles con el instructor
+  const compatible = students.filter(s =>
+    s.practice_types.some(t => instructorTypes.includes(t))
+  )
 
   const filtered = filterType === 'all'
-    ? students
-    : students.filter(s => (s.practice_types as PracticeType[]).includes(filterType))
-
-  const typeColors: Record<PracticeType, { bg: string; text: string }> = {
-    car: { bg: '#0057B820', text: '#0057B8' },
-    truck: { bg: '#38bdf820', text: '#38bdf8' },
-    moto: { bg: '#a78bfa20', text: '#a78bfa' },
-  }
+    ? compatible
+    : compatible.filter(s => s.practice_types.includes(filterType))
 
   return (
     <div className="p-8">
-      <div className="mb-8">
-        <p className="text-sm font-medium mb-1" style={{ color: '#0057B8' }}>Tablón de alumnos</p>
-        <h1 className="text-3xl font-black text-white tracking-tight">Alumnos disponibles</h1>
-        <p className="text-sm mt-1" style={{ color: '#6b8ab0' }}>
-          Alumnos pendientes de asignación · compatibles con tus tipos de práctica
-        </p>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <p className="text-sm font-medium mb-1" style={{ color: '#0057B8' }}>Tablón de alumnos</p>
+          <h1 className="text-3xl font-black text-white tracking-tight">Alumnos disponibles</h1>
+          <p className="text-sm mt-1" style={{ color: '#6b8ab0' }}>
+            Compatibles con tus prácticas · se actualiza cada 30s
+          </p>
+        </div>
+        {compatible.length > 0 && (
+          <div className="px-4 py-2 rounded-xl" style={{ background: 'rgba(0,87,184,0.1)', border: '1px solid rgba(0,87,184,0.3)' }}>
+            <span className="text-2xl font-black" style={{ color: '#60a5fa' }}>{compatible.length}</span>
+            <span className="text-xs font-semibold ml-2" style={{ color: '#6b8ab0' }}>disponibles</span>
+          </div>
+        )}
       </div>
 
       {/* Filtros por tipo */}
       {instructorTypes.length > 1 && (
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-6 flex-wrap">
           <button
             onClick={() => setFilterType('all')}
             className="px-4 py-2 rounded-lg text-sm font-semibold transition"
@@ -113,22 +141,22 @@ export default function TablonPage() {
               border: `1px solid ${filterType === 'all' ? '#0057B8' : '#1a2d45'}`,
             }}
           >
-            Todos ({students.length})
+            Todos ({compatible.length})
           </button>
           {instructorTypes.map(t => {
-            const count = students.filter(s => (s.practice_types as PracticeType[]).includes(t)).length
+            const count = compatible.filter(s => s.practice_types.includes(t)).length
             return (
               <button
                 key={t}
                 onClick={() => setFilterType(t)}
                 className="px-4 py-2 rounded-lg text-sm font-semibold transition"
                 style={{
-                  background: filterType === t ? typeColors[t].text : '#0d1829',
+                  background: filterType === t ? TYPE_COLORS[t].color : '#0d1829',
                   color: filterType === t ? 'white' : '#6b8ab0',
-                  border: `1px solid ${filterType === t ? typeColors[t].text : '#1a2d45'}`,
+                  border: `1px solid ${filterType === t ? TYPE_COLORS[t].color : '#1a2d45'}`,
                 }}
               >
-                {getPracticeLabel(t)} ({count})
+                {TYPE_COLORS[t].emoji} {getPracticeLabel(t)} ({count})
               </button>
             )
           })}
@@ -136,7 +164,9 @@ export default function TablonPage() {
       )}
 
       {loading ? (
-        <div className="text-sm" style={{ color: '#6b8ab0' }}>Cargando...</div>
+        <div className="flex justify-center py-20">
+          <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: '#0057B8', borderTopColor: 'transparent' }} />
+        </div>
       ) : !instructorId ? (
         <div className="rounded-2xl p-12 text-center" style={{ background: '#0d1829', border: '1px solid #1a2d45' }}>
           <p className="text-white font-semibold">Sin instructor asignado</p>
@@ -148,67 +178,92 @@ export default function TablonPage() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
           </svg>
           <p className="font-semibold text-white">Tablón vacío</p>
-          <p className="text-sm mt-1" style={{ color: '#6b8ab0' }}>No hay alumnos pendientes de asignación compatibles contigo</p>
+          <p className="text-sm mt-1" style={{ color: '#6b8ab0' }}>No hay alumnos compatibles en espera</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {filtered.map((student, idx) => (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          {filtered.map((s, idx) => (
             <div
-              key={student.id}
-              className="rounded-2xl px-5 py-4 flex items-center gap-4"
-              style={{ background: '#0d1829', border: '1px solid #1a2d45' }}
+              key={s.id}
+              className="rounded-2xl p-5 flex flex-col gap-4"
+              style={{ background: '#0d1829', border: `1px solid ${isRecent(s.created_at) ? 'rgba(0,87,184,0.5)' : '#1a2d45'}` }}
             >
-              {/* Posición cronológica */}
-              <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-black" style={{ background: '#0a1220', color: '#3a5070' }}>
-                {idx + 1}
-              </div>
-
-              {/* Info alumno */}
-              <div className="flex-1">
-                <p className="text-white font-bold">{student.full_name}</p>
-                <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  {(student.practice_types as PracticeType[]).map(t => (
-                    <span key={t} className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{
-                      background: typeColors[t]?.bg ?? '#0057B820',
-                      color: typeColors[t]?.text ?? '#0057B8',
-                    }}>
-                      {getPracticeLabel(t)}
-                    </span>
-                  ))}
-                  {/* Compatibilidad */}
-                  {(student.practice_types as PracticeType[]).some(t => instructorTypes.includes(t)) && (
-                    <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(52,211,153,0.1)', color: '#34d399' }}>
-                      ✓ Compatible
-                    </span>
-                  )}
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-black text-sm"
+                  style={{ background: 'rgba(0,87,184,0.15)', color: '#0057B8' }}>
+                  {s.full_name.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-white font-bold">{s.full_name}</p>
+                    {isRecent(s.created_at) && (
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(0,87,184,0.2)', color: '#60a5fa' }}>
+                        Nuevo
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs font-mono mt-0.5" style={{ color: '#3a5070' }}>
+                    {s.dni} · #{String(s.order_number).padStart(3, '0')}
+                  </p>
+                  {s.phone && <p className="text-xs mt-1" style={{ color: '#6b8ab0' }}>📱 {s.phone}</p>}
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-xs" style={{ color: '#3a5070' }}>Cola</p>
+                  <p className="text-lg font-black" style={{ color: '#6b8ab0' }}>{idx + 1}</p>
                 </div>
               </div>
 
-              {/* Fecha de registro */}
-              <div className="text-right text-xs" style={{ color: '#3a5070' }}>
-                <p>Registrado</p>
-                <p className="font-semibold" style={{ color: '#6b8ab0' }}>{formatDate(student.created_at.split('T')[0])}</p>
+              <div className="flex flex-wrap gap-2">
+                {s.practice_types.map(t => (
+                  <span key={t} className="text-xs font-bold px-3 py-1.5 rounded-lg"
+                    style={{ background: TYPE_COLORS[t].bg, color: TYPE_COLORS[t].color }}>
+                    {TYPE_COLORS[t].emoji} {getPracticeLabel(t)}
+                  </span>
+                ))}
               </div>
 
-              {/* Nº orden */}
-              <div className="text-xs font-mono px-3 py-1.5 rounded-lg" style={{ background: '#0f1c2e', color: '#3a5070' }}>
-                #{student.order_number}
-              </div>
+              {s.notes && (
+                <div className="rounded-xl px-4 py-3 text-sm italic" style={{ background: '#0a1220', color: '#6b8ab0', borderLeft: '3px solid #1a2d45' }}>
+                  "{s.notes}"
+                </div>
+              )}
 
-              {/* Botón elegir */}
-              <button
-                onClick={() => claimStudent(student)}
-                disabled={claiming === student.id}
-                className="text-xs px-4 py-2 rounded-xl font-bold transition-all"
-                style={{
-                  background: claiming === student.id ? '#1a2d45' : '#0057B8',
-                  color: claiming === student.id ? '#3a5070' : 'white',
-                }}
-                onMouseEnter={e => { if (claiming !== student.id) (e.currentTarget as HTMLElement).style.background = '#004494' }}
-                onMouseLeave={e => { if (claiming !== student.id) (e.currentTarget as HTMLElement).style.background = '#0057B8' }}
-              >
-                {claiming === student.id ? 'Asignando...' : 'Elegir alumno'}
-              </button>
+              <div className="flex items-center justify-between pt-1" style={{ borderTop: '1px solid #0f1c2e' }}>
+                <p className="text-xs" style={{ color: '#3a5070' }}>⏱ {timeAgo(s.created_at)}</p>
+
+                {confirmId === s.id ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setConfirmId(null)}
+                      className="text-xs px-3 py-1.5 rounded-lg font-semibold"
+                      style={{ background: '#0a1220', color: '#6b8ab0', border: '1px solid #1a2d45' }}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={() => handleClaim(s.id)}
+                      disabled={claiming}
+                      className="text-xs px-4 py-1.5 rounded-lg font-bold text-white"
+                      style={{ background: claiming ? '#1a2d45' : '#0057B8' }}
+                    >
+                      {claiming ? 'Asignando...' : '✓ Confirmar'}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmId(s.id)}
+                    className="flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-xl text-white transition-all"
+                    style={{ background: '#0057B8' }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#004494'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#0057B8'}
+                  >
+                    Elegir alumno
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>

@@ -19,7 +19,7 @@ export default function InstructorAlumnosPage() {
     const { data: instructor } = await supabase
       .from('instructors')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single()
     if (instructor) {
       const { data } = await supabase

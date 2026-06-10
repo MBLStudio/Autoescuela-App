@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useEffect, useState, useRef } from 'react'
 import type { PracticeType } from '@/types'
 
 interface QueueStudent {
@@ -13,6 +12,12 @@ interface QueueStudent {
   practice_types: PracticeType[]
   notes: string | null
   created_at: string
+}
+
+interface Instructor {
+  id: string
+  name: string
+  practice_types: PracticeType[]
 }
 
 const PRACTICE = {
@@ -34,37 +39,59 @@ function isRecent(dateStr: string): boolean {
 }
 
 export default function AdminTablonPage() {
-  const supabase = createClient()
   const [students, setStudents] = useState<QueueStudent[]>([])
+  const [instructors, setInstructors] = useState<Instructor[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<PracticeType | 'all'>('all')
   const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [selectedInstructorId, setSelectedInstructorId] = useState<string>('')
   const [claiming, setClaiming] = useState(false)
-  const [userId, setUserId] = useState<string | null>(null)
+  const refreshRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null))
     load()
+    loadInstructors()
+    refreshRef.current = setInterval(() => load(), 30000)
+    return () => { if (refreshRef.current) clearInterval(refreshRef.current) }
   }, [])
 
   async function load() {
-    setLoading(true)
     const res = await fetch('/api/tablon/list')
     const json = await res.json()
     if (json.students) setStudents(json.students)
     setLoading(false)
   }
 
+  async function loadInstructors() {
+    const res = await fetch('/api/profesores/list')
+    const json = await res.json()
+    if (json.instructors) setInstructors(json.instructors)
+  }
+
+  function openConfirm(studentId: string) {
+    setConfirmId(studentId)
+    setSelectedInstructorId(instructors[0]?.id ?? '')
+  }
+
   async function handleClaim(studentId: string) {
-    if (!userId) return
+    if (!selectedInstructorId) return
     setClaiming(true)
     const res = await fetch('/api/tablon/claim', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ studentId, instructorId: userId }),
+      body: JSON.stringify({ studentId, instructorId: selectedInstructorId }),
     })
     if (res.ok) {
+      const { instructorName } = await res.json()
       setStudents(prev => prev.filter(s => s.id !== studentId))
+      // Notificar al alumno
+      if (instructorName) {
+        fetch('/api/notify-claimed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ studentId, instructorName }),
+        }).catch(() => {})
+      }
     }
     setConfirmId(null)
     setClaiming(false)
@@ -85,15 +112,23 @@ export default function AdminTablonPage() {
     <div className="p-8">
 
       {/* Cabecera */}
-      <div className="mb-8">
-        <p className="text-sm font-semibold mb-1" style={{ color: '#0057B8' }}>Administración</p>
-        <h1 className="text-3xl font-black text-white tracking-tight">Tablón de alumnos</h1>
-        <p className="text-sm mt-1.5" style={{ color: '#6b8ab0' }}>
-          Alumnos en espera de instructor — elige los que quieras asignar a tu cartera
-        </p>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <p className="text-sm font-semibold mb-1" style={{ color: '#0057B8' }}>Administración</p>
+          <h1 className="text-3xl font-black text-white tracking-tight">Tablón de alumnos</h1>
+          <p className="text-sm mt-1.5" style={{ color: '#6b8ab0' }}>
+            Alumnos en espera de instructor · se actualiza cada 30s
+          </p>
+        </div>
+        {counts.all > 0 && (
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: 'rgba(0,87,184,0.1)', border: '1px solid rgba(0,87,184,0.3)' }}>
+            <span className="text-2xl font-black" style={{ color: '#60a5fa' }}>{counts.all}</span>
+            <span className="text-xs font-semibold" style={{ color: '#6b8ab0' }}>en cola</span>
+          </div>
+        )}
       </div>
 
-      {/* Stats */}
+      {/* Stats / filtros */}
       <div className="grid grid-cols-4 gap-3 mb-6">
         {[
           { key: 'all',   label: 'En cola',  color: '#6b8ab0' },
@@ -149,7 +184,6 @@ export default function AdminTablonPage() {
                   style={{ background: 'rgba(0,87,184,0.15)', color: '#0057B8' }}>
                   {s.full_name.charAt(0).toUpperCase()}
                 </div>
-
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-white font-bold text-base leading-tight">{s.full_name}</p>
@@ -166,7 +200,6 @@ export default function AdminTablonPage() {
                     <p className="text-xs mt-1" style={{ color: '#6b8ab0' }}>📱 {s.phone}</p>
                   )}
                 </div>
-
                 <div className="text-right flex-shrink-0">
                   <p className="text-xs font-bold" style={{ color: '#3a5070' }}>Cola</p>
                   <p className="text-lg font-black" style={{ color: '#6b8ab0' }}>{idx + 1}</p>
@@ -183,7 +216,7 @@ export default function AdminTablonPage() {
                 ))}
               </div>
 
-              {/* Notas del instructor */}
+              {/* Notas */}
               {s.notes && (
                 <div className="rounded-xl px-4 py-3 text-sm italic" style={{ background: '#0a1220', color: '#6b8ab0', borderLeft: '3px solid #1a2d45' }}>
                   "{s.notes}"
@@ -195,32 +228,48 @@ export default function AdminTablonPage() {
                 <p className="text-xs" style={{ color: '#3a5070' }}>⏱ {timeAgo(s.created_at)}</p>
 
                 {confirmId === s.id ? (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setConfirmId(null)}
-                      className="text-xs px-3 py-1.5 rounded-lg font-semibold transition"
-                      style={{ background: '#0a1220', color: '#6b8ab0', border: '1px solid #1a2d45' }}
+                  <div className="flex flex-col gap-2 items-end">
+                    {/* Selector de instructor */}
+                    <select
+                      value={selectedInstructorId}
+                      onChange={e => setSelectedInstructorId(e.target.value)}
+                      className="text-xs rounded-lg px-3 py-1.5 font-semibold outline-none"
+                      style={{ background: '#0a1220', color: 'white', border: '1px solid #1a2d45', minWidth: '160px' }}
                     >
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={() => handleClaim(s.id)}
-                      disabled={claiming}
-                      className="text-xs px-4 py-1.5 rounded-lg font-bold text-white transition"
-                      style={{ background: claiming ? '#1a2d45' : '#0057B8' }}
-                    >
-                      {claiming ? 'Asignando...' : '✓ Confirmar'}
-                    </button>
+                      {instructors.length === 0
+                        ? <option value="">Sin profesores</option>
+                        : instructors.map(i => (
+                          <option key={i.id} value={i.id}>{i.name}</option>
+                        ))
+                      }
+                    </select>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setConfirmId(null)}
+                        className="text-xs px-3 py-1.5 rounded-lg font-semibold transition"
+                        style={{ background: '#0a1220', color: '#6b8ab0', border: '1px solid #1a2d45' }}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={() => handleClaim(s.id)}
+                        disabled={claiming || !selectedInstructorId}
+                        className="text-xs px-4 py-1.5 rounded-lg font-bold text-white transition"
+                        style={{ background: claiming || !selectedInstructorId ? '#1a2d45' : '#0057B8' }}
+                      >
+                        {claiming ? 'Asignando...' : '✓ Asignar'}
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <button
-                    onClick={() => setConfirmId(s.id)}
+                    onClick={() => openConfirm(s.id)}
                     className="flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-xl text-white transition-all"
                     style={{ background: '#0057B8' }}
                     onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#004494'}
                     onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#0057B8'}
                   >
-                    Elegir alumno
+                    Asignar instructor
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                     </svg>
