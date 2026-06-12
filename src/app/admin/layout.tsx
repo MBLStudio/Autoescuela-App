@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { useState } from 'react'
 
 const navItems = [
   {
@@ -106,112 +107,179 @@ const navItems = [
   },
 ]
 
+const SidebarContent = ({
+  pathname,
+  onNavigate,
+  onLogout,
+}: {
+  pathname: string
+  onNavigate: () => void
+  onLogout: () => void
+}) => (
+  <>
+    {/* Logo */}
+    <div className="px-4 py-5" style={{ borderBottom: '1px solid #1a2d45' }}>
+      <div className="w-full rounded-xl overflow-hidden" style={{ background: '#0057B8' }}>
+        <div className="px-4 py-4">
+          <svg viewBox="0 0 180 55" className="w-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="52" y="8" width="122" height="34" rx="2" stroke="white" strokeWidth="2" fill="none" opacity="0.9"/>
+            <path d="M8 42 L8 20 Q8 14 14 14 L52 14 L52 42 Z" stroke="white" strokeWidth="2" fill="none" opacity="0.9"/>
+            <path d="M14 20 L14 32 L36 32 L36 20 Q36 16 32 16 L18 16 Q14 16 14 20 Z" fill="white" opacity="0.15"/>
+            <path d="M14 20 L14 32 L36 32 L36 20 Q36 16 32 16 L18 16 Q14 16 14 20 Z" stroke="white" strokeWidth="1.5" fill="none"/>
+            <circle cx="20" cy="44" r="7" stroke="white" strokeWidth="2" fill="#0057B8"/>
+            <circle cx="20" cy="44" r="2.5" fill="white" opacity="0.6"/>
+            <circle cx="42" cy="44" r="7" stroke="white" strokeWidth="2" fill="#0057B8"/>
+            <circle cx="42" cy="44" r="2.5" fill="white" opacity="0.6"/>
+            <circle cx="120" cy="44" r="7" stroke="white" strokeWidth="2" fill="#0057B8"/>
+            <circle cx="120" cy="44" r="2.5" fill="white" opacity="0.6"/>
+            <circle cx="142" cy="44" r="7" stroke="white" strokeWidth="2" fill="#0057B8"/>
+            <circle cx="142" cy="44" r="2.5" fill="white" opacity="0.6"/>
+            <circle cx="164" cy="44" r="7" stroke="white" strokeWidth="2" fill="#0057B8"/>
+            <circle cx="164" cy="44" r="2.5" fill="white" opacity="0.6"/>
+            <line x1="8" y1="42" x2="174" y2="42" stroke="white" strokeWidth="1.5" opacity="0.4"/>
+          </svg>
+          <div className="mt-1 pl-0.5">
+            <p className="text-white text-xs font-medium tracking-widest opacity-80" style={{ letterSpacing: '0.2em' }}>AUTO-ESCUELA</p>
+            <p className="text-white font-black text-xl tracking-tight leading-none" style={{ letterSpacing: '0.05em' }}>BAHILLO</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* Nav */}
+    <nav className="flex-1 min-h-0 overflow-y-auto scroll-smooth px-3 py-4 space-y-1">
+      {navItems.map(item => {
+        const isActive = pathname === item.href
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
+            style={{
+              background: isActive ? '#0057B8' : 'transparent',
+              color: isActive ? 'white' : '#6b8ab0',
+            }}
+            onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = '#0f1c2e' }}
+            onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+          >
+            {item.icon}
+            {item.label}
+          </Link>
+        )
+      })}
+    </nav>
+
+    {/* Info + Logout */}
+    <div className="px-3 py-4" style={{ borderTop: '1px solid #1a2d45' }}>
+      <div className="px-3 py-2 mb-2 rounded-xl" style={{ background: '#0f1c2e' }}>
+        <p className="text-xs font-medium text-white">Auto-Escuela Bahillo</p>
+        <p className="text-xs mt-0.5" style={{ color: '#3a5070' }}>Palencia</p>
+      </div>
+      <button
+        onClick={onLogout}
+        className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
+        style={{ color: '#6b8ab0' }}
+        onMouseEnter={e => {
+          (e.currentTarget as HTMLElement).style.background = '#0f1c2e'
+          ;(e.currentTarget as HTMLElement).style.color = 'white'
+        }}
+        onMouseLeave={e => {
+          (e.currentTarget as HTMLElement).style.background = 'transparent'
+          ;(e.currentTarget as HTMLElement).style.color = '#6b8ab0'
+        }}
+      >
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg>
+        Cerrar sesión
+      </button>
+    </div>
+  </>
+)
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const [menuOpen, setMenuOpen] = useState(false)
 
   async function handleLogout() {
     await supabase.auth.signOut()
     router.push('/')
   }
 
+  const currentLabel = navItems.find(i => i.href === pathname)?.label ?? 'Admin'
+
   return (
     <div className="min-h-screen flex" style={{ background: '#0a0f1a' }}>
 
-      {/* Sidebar */}
-      <aside className="w-60 flex flex-col fixed h-full" style={{ background: '#0d1829', borderRight: '1px solid #1a2d45' }}>
-
-        {/* Logo */}
-<div className="px-4 py-5" style={{ borderBottom: '1px solid #1a2d45' }}>
-  <div className="w-full rounded-xl overflow-hidden" style={{ background: '#0057B8' }}>
-    <div className="px-4 py-4">
-      {/* Camión minimalista */}
-      <svg viewBox="0 0 180 55" className="w-full" fill="none" xmlns="http://www.w3.org/2000/svg">
-        {/* Remolque */}
-        <rect x="52" y="8" width="122" height="34" rx="2" stroke="white" strokeWidth="2" fill="none" opacity="0.9"/>
-        {/* Cabina */}
-        <path d="M8 42 L8 20 Q8 14 14 14 L52 14 L52 42 Z" stroke="white" strokeWidth="2" fill="none" opacity="0.9"/>
-        {/* Parabrisas */}
-        <path d="M14 20 L14 32 L36 32 L36 20 Q36 16 32 16 L18 16 Q14 16 14 20 Z" fill="white" opacity="0.15"/>
-        <path d="M14 20 L14 32 L36 32 L36 20 Q36 16 32 16 L18 16 Q14 16 14 20 Z" stroke="white" strokeWidth="1.5" fill="none"/>
-        {/* Ruedas */}
-        <circle cx="20" cy="44" r="7" stroke="white" strokeWidth="2" fill="#0057B8"/>
-        <circle cx="20" cy="44" r="2.5" fill="white" opacity="0.6"/>
-        <circle cx="42" cy="44" r="7" stroke="white" strokeWidth="2" fill="#0057B8"/>
-        <circle cx="42" cy="44" r="2.5" fill="white" opacity="0.6"/>
-        <circle cx="120" cy="44" r="7" stroke="white" strokeWidth="2" fill="#0057B8"/>
-        <circle cx="120" cy="44" r="2.5" fill="white" opacity="0.6"/>
-        <circle cx="142" cy="44" r="7" stroke="white" strokeWidth="2" fill="#0057B8"/>
-        <circle cx="142" cy="44" r="2.5" fill="white" opacity="0.6"/>
-        <circle cx="164" cy="44" r="7" stroke="white" strokeWidth="2" fill="#0057B8"/>
-        <circle cx="164" cy="44" r="2.5" fill="white" opacity="0.6"/>
-        {/* Línea chasis */}
-        <line x1="8" y1="42" x2="174" y2="42" stroke="white" strokeWidth="1.5" opacity="0.4"/>
-      </svg>
-
-      {/* Texto */}
-      <div className="mt-1 pl-0.5">
-        <p className="text-white text-xs font-medium tracking-widest opacity-80" style={{ letterSpacing: '0.2em' }}>AUTO-ESCUELA</p>
-        <p className="text-white font-black text-xl tracking-tight leading-none" style={{ letterSpacing: '0.05em' }}>BAHILLO</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-        {/* Nav */}
-        <nav className="flex-1 min-h-0 overflow-y-auto scroll-smooth px-3 py-4 space-y-1">
-          {navItems.map(item => {
-            const isActive = pathname === item.href
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
-                style={{
-                  background: isActive ? '#0057B8' : 'transparent',
-                  color: isActive ? 'white' : '#6b8ab0',
-                }}
-                onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = '#0f1c2e' }}
-                onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-              >
-                {item.icon}
-                {item.label}
-              </Link>
-            )
-          })}
-        </nav>
-
-        {/* Info + Logout */}
-        <div className="px-3 py-4" style={{ borderTop: '1px solid #1a2d45' }}>
-          <div className="px-3 py-2 mb-2 rounded-xl" style={{ background: '#0f1c2e' }}>
-            <p className="text-xs font-medium text-white">Auto-Escuela Bahillo</p>
-            <p className="text-xs mt-0.5" style={{ color: '#3a5070' }}>Palencia</p>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
-            style={{ color: '#6b8ab0' }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.background = '#0f1c2e'
-              ;(e.currentTarget as HTMLElement).style.color = 'white'
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.background = 'transparent'
-              ;(e.currentTarget as HTMLElement).style.color = '#6b8ab0'
-            }}
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            Cerrar sesión
-          </button>
-        </div>
-
+      {/* ── SIDEBAR — solo escritorio ── */}
+      <aside className="hidden md:flex w-60 flex-col fixed h-full" style={{ background: '#0d1829', borderRight: '1px solid #1a2d45' }}>
+        <SidebarContent pathname={pathname} onNavigate={() => {}} onLogout={handleLogout} />
       </aside>
 
-      {/* Contenido */}
-      <main className="flex-1 ml-60 min-h-screen">
+      {/* ── TOPBAR — solo móvil ── */}
+      <header
+        className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4"
+        style={{
+          background: '#0d1829',
+          borderBottom: '1px solid #1a2d45',
+          height: '56px',
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <div className="px-2 py-1 rounded-lg" style={{ background: '#0057B8' }}>
+            <p className="text-white font-black text-xs tracking-widest">BAHILLO</p>
+          </div>
+          <p className="text-white font-semibold text-sm">{currentLabel}</p>
+        </div>
+        <button
+          onClick={() => setMenuOpen(true)}
+          className="p-2 rounded-xl transition"
+          style={{ color: '#6b8ab0' }}
+        >
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </header>
+
+      {/* ── DRAWER — solo móvil ── */}
+      {menuOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="md:hidden fixed inset-0 z-40"
+            style={{ background: 'rgba(0,0,0,0.6)' }}
+            onClick={() => setMenuOpen(false)}
+          />
+          {/* Panel */}
+          <div
+            className="md:hidden fixed top-0 left-0 bottom-0 z-50 w-72 flex flex-col"
+            style={{ background: '#0d1829', borderRight: '1px solid #1a2d45' }}
+          >
+            {/* Botón cerrar */}
+            <button
+              onClick={() => setMenuOpen(false)}
+              className="absolute top-4 right-4 p-2 rounded-xl"
+              style={{ color: '#6b8ab0' }}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <SidebarContent
+              pathname={pathname}
+              onNavigate={() => setMenuOpen(false)}
+              onLogout={handleLogout}
+            />
+          </div>
+        </>
+      )}
+
+      {/* ── CONTENIDO ── */}
+      <main className="flex-1 md:ml-60 min-h-screen pt-14 md:pt-0">
         {children}
       </main>
 
