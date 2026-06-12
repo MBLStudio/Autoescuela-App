@@ -16,15 +16,15 @@ const PICKUP_LOCATIONS = [
 
 function getNextWorkingDays(count: number): Date[] {
   const days: Date[] = []
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const limit = new Date(today)
-  limit.setDate(limit.getDate() + count)
+  const current = new Date()
+  current.setHours(0, 0, 0, 0)
 
-  const current = new Date(today)
-  while (current <= limit) {
-    days.push(new Date(current))
+  while (days.length < count) {
     current.setDate(current.getDate() + 1)
+    const day = current.getDay()
+    if (day !== 0 && day !== 6) {
+      days.push(new Date(current))
+    }
   }
   return days
 }
@@ -245,6 +245,7 @@ export default function StudentPage() {
       .from('bookings')
       .update(updateData)
       .eq('id', booking.id)
+      .eq('student_id', student!.id)
 
     if (error) {
       setCancelError('No se pudo cancelar. Inténtalo de nuevo.')
@@ -257,7 +258,11 @@ export default function StudentPage() {
       fetch('/api/calendar', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId: booking.calendar_event_id }),
+        body: JSON.stringify({
+          eventId: booking.calendar_event_id,
+          studentId: student!.id,
+          studentToken: token,
+        }),
       }).catch(() => {})
     }
 
@@ -267,6 +272,7 @@ export default function StudentPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         cancelledStudentId: student!.id,
+        studentToken: token,
         instructorId: student!.instructor_id,
         practiceDate: booking.practice_date,
         startTime: booking.start_time,
@@ -281,6 +287,8 @@ export default function StudentPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         instructorId: student!.instructor_id,
+        studentId: student!.id,
+        studentToken: token,
         studentName: student!.full_name,
         practiceDate: booking.practice_date,
         startTime: booking.start_time,
@@ -300,6 +308,20 @@ export default function StudentPage() {
     if (!student || !selectedDate || !selectedSlot) return
     setSubmitting(true)
     setSubmitError('')
+
+    // Comprobar límite de reservas activas simultáneas
+    if (student.max_concurrent_bookings) {
+      const { data: activeBookings } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('student_id', student.id)
+        .eq('status', 'confirmed')
+      if (activeBookings && activeBookings.length >= student.max_concurrent_bookings) {
+        setSubmitError(`Tienes el máximo de ${student.max_concurrent_bookings} reservas activas permitidas.`)
+        setSubmitting(false)
+        return
+      }
+    }
 
     // Comprobar límite diario (1 normal, 2 en modo examen)
     const maxDaily = student.exam_mode ? 2 : 1
@@ -341,39 +363,39 @@ export default function StudentPage() {
     const endMinutes = h * 60 + m + duration
     const endTime = `${String(Math.floor(endMinutes / 60)).padStart(2, '0')}:${String(endMinutes % 60).padStart(2, '0')}`
 
-    const { error } = await supabase.from('bookings').insert({
-      student_id: student.id,
-      instructor_id: student.instructor_id,
-      practice_date: selectedDate,
-      start_time: selectedSlot,
-      end_time: endTime,
-      practice_type: selectedType,
-      practice_subtype: selectedSubtype,
-      pickup_location: selectedLocation || null,
-      status: 'confirmed',
-    })
+    const { data: newBooking, error } = await supabase
+      .from('bookings')
+      .insert({
+        student_id: student.id,
+        instructor_id: student.instructor_id,
+        practice_date: selectedDate,
+        start_time: selectedSlot,
+        end_time: endTime,
+        practice_type: selectedType,
+        practice_subtype: selectedSubtype,
+        pickup_location: selectedLocation || null,
+        status: 'confirmed',
+      })
+      .select('id')
+      .single()
 
     if (error) {
-      setSubmitError('No se pudo confirmar la reserva. Inténtalo de nuevo.')
+      const msg = error.code === '23505'
+        ? 'Ese hueco acaba de ser reservado por otro alumno. Elige otro.'
+        : 'No se pudo confirmar la reserva. Inténtalo de nuevo.'
+      setSubmitError(msg)
       setSubmitting(false)
       return
     }
 
-    // Obtener el ID de la reserva recién creada y crear evento en Google Calendar
-    const { data: newBooking } = await supabase
-      .from('bookings')
-      .select('id')
-      .eq('student_id', student.id)
-      .eq('practice_date', selectedDate)
-      .eq('start_time', selectedSlot)
-      .single()
-
-    if (newBooking) {
+    if (newBooking?.id) {
       fetch('/api/calendar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           bookingId: newBooking.id,
+          studentId: student.id,
+          studentToken: token,
           studentName: student.full_name,
           practiceDate: selectedDate,
           startTime: selectedSlot,
@@ -396,6 +418,8 @@ export default function StudentPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         instructorId: student.instructor_id,
+        studentId: student.id,
+        studentToken: token,
         studentName: student.full_name,
         practiceDate: selectedDate,
         startTime: selectedSlot,

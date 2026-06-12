@@ -40,10 +40,10 @@ function buildSlotEmail(
 
 export async function POST(req: NextRequest) {
   try {
-    const { cancelledStudentId, instructorId, practiceDate, startTime, practiceType, practiceSubtype } =
+    const { cancelledStudentId, studentToken, instructorId, practiceDate, startTime, practiceType, practiceSubtype } =
       await req.json()
 
-    if (!cancelledStudentId || !instructorId || !practiceDate || !startTime || !practiceType) {
+    if (!cancelledStudentId || !studentToken || !instructorId || !practiceDate || !startTime || !practiceType) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -57,6 +57,18 @@ export async function POST(req: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
+
+    // Verificar que el token pertenece al alumno que cancela
+    const { data: caller } = await supabase
+      .from('students')
+      .select('id')
+      .eq('id', cancelledStudentId)
+      .eq('token', studentToken)
+      .single()
+
+    if (!caller) {
+      return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+    }
 
     const { data: students, error } = await supabase
       .from('students')

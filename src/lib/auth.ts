@@ -19,12 +19,11 @@ export async function getSessionUser(): Promise<AuthUser | null> {
       .eq('id', user.id)
       .single()
 
-    // Si no está en staff o el rol es desconocido → es el dueño (admin)
-    const role: UserRole = (['admin', 'instructor', 'secretary'].includes(staff?.role)
-      ? staff!.role
-      : 'admin') as UserRole
+    if (!staff || !(['admin', 'instructor', 'secretary'].includes(staff.role))) {
+      return null
+    }
 
-    return { id: user.id, role }
+    return { id: user.id, role: staff.role as UserRole }
   } catch {
     return null
   }

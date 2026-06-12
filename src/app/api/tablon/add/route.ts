@@ -6,6 +6,10 @@ function generateToken() {
   return crypto.randomUUID().replace(/-/g, '').substring(0, 16)
 }
 
+function generatePin() {
+  return String(Math.floor(100000 + Math.random() * 900000))
+}
+
 export async function POST(req: NextRequest) {
   const user = await getSessionUser()
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -55,7 +59,7 @@ export async function POST(req: NextRequest) {
       notes: notes?.trim() || null,
       token: generateToken(),
       login_code: `Alumno-${num}`,
-      login_pin: num,
+      login_pin: generatePin(),
     })
     .select()
     .single()

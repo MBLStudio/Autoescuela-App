@@ -49,7 +49,7 @@ export default function AlumnosPage() {
   )
 
   return (
-    <div className="p-8">
+    <div className="px-4 py-6 md:p-8">
 
       {/* Cabecera */}
       <div className="flex items-center justify-between mb-8">
@@ -101,105 +101,139 @@ export default function AlumnosPage() {
           <p className="text-sm mt-1" style={{ color: '#6b8ab0' }}>Crea el primer alumno para empezar</p>
         </div>
       ) : (
-        <div className="rounded-2xl overflow-hidden" style={{ background: '#0d1829', border: '1px solid #1a2d45' }}>
-          <table className="w-full">
-            <thead>
-              <tr style={{ borderBottom: '1px solid #1a2d45' }}>
-                {['#', 'Alumno', 'DNI', 'Prácticas', 'Instructor', 'Alta', ''].map(h => (
-                  <th key={h} className="text-left px-5 py-4 text-xs font-bold uppercase tracking-wider" style={{ color: '#3a5070' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((student, idx) => (
-                <tr
-                  key={student.id}
-                  style={{ borderBottom: idx < filtered.length - 1 ? '1px solid #0f1c2e' : 'none' }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#0f1c2e'}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-                >
-                  <td className="px-5 py-4">
-                    <span className="text-xs font-black font-mono px-2 py-1 rounded-lg" style={{ background: '#0057B820', color: '#0057B8' }}>
-                      {student.order_number}
+        <>
+          {/* Vista móvil — tarjetas */}
+          <div className="md:hidden space-y-3">
+            {filtered.map(student => (
+              <div key={student.id} className="rounded-2xl p-4" style={{ background: '#0d1829', border: '1px solid #1a2d45' }}>
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-xs font-black font-mono px-2 py-1 rounded-lg flex-shrink-0" style={{ background: '#0057B820', color: '#0057B8' }}>
+                      #{student.order_number}
                     </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <p className="text-white font-bold text-sm">{student.full_name}</p>
-                    {student.phone && (
-                      <p className="text-xs mt-0.5" style={{ color: '#3a5070' }}>{student.phone}</p>
-                    )}
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className="text-xs font-mono px-2 py-1 rounded-lg" style={{ background: '#0f1c2e', color: '#6b8ab0' }}>
-                      {student.dni}
+                    <div className="min-w-0">
+                      <p className="text-white font-bold text-sm truncate">{student.full_name}</p>
+                      <p className="text-xs mt-0.5 font-mono" style={{ color: '#3a5070' }}>{student.dni}</p>
+                    </div>
+                  </div>
+                  {student.instructor ? (
+                    <span className="text-xs font-semibold px-2 py-1 rounded-lg flex-shrink-0" style={{ background: 'rgba(0,87,184,0.1)', color: '#60a5fa' }}>
+                      {student.instructor.name.split(' ')[0]}
                     </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex gap-1.5">
-                      {student.practice_types.map(type => (
-                        <span
-                          key={type}
-                          className="text-xs px-2.5 py-1 rounded-full font-bold"
-                          style={{
-                            background: type === 'car' ? '#0057B820' : type === 'truck' ? '#38bdf820' : '#a78bfa20',
-                            color: type === 'car' ? '#0057B8' : type === 'truck' ? '#38bdf8' : '#a78bfa',
-                          }}
-                        >
-                          {getPracticeLabel(type)}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    {student.instructor ? (
-                      <span className="text-xs font-semibold px-2.5 py-1 rounded-lg" style={{ background: 'rgba(0,87,184,0.1)', color: '#60a5fa' }}>
-                        {student.instructor.name}
-                      </span>
-                    ) : (
-                      <span className="text-xs font-semibold px-2.5 py-1 rounded-lg" style={{ background: '#0a1220', color: '#3a5070' }}>
-                        Sin asignar
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-5 py-4 text-sm" style={{ color: '#3a5070' }}>
-                    {formatDate(student.created_at.split('T')[0])}
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-2 justify-end">
-                      <Link
-                        href={`/admin/alumnos/${student.id}`}
-                        className="text-xs px-3 py-1.5 rounded-lg font-semibold transition-all duration-150"
-                        style={{ background: '#0f1c2e', color: '#a0b8d0' }}
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#1a2d45'}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#0f1c2e'}
-                      >
-                        Ver perfil
-                      </Link>
-                      <button
-                        onClick={() => copyLink(student.token)}
-                        className="text-xs px-3 py-1.5 rounded-lg font-semibold transition-all duration-150"
-                        style={{ background: '#0057B820', color: '#0057B8' }}
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#0057B840'}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#0057B820'}
-                      >
-                        {copied === student.token ? '✓ Copiado' : '🔗 Enlace'}
-                      </button>
-                      <button
-                        onClick={() => deactivateStudent(student.id)}
-                        className="text-xs px-3 py-1.5 rounded-lg font-semibold transition-all duration-150"
-                        style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171' }}
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.2)'}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.1)'}
-                      >
-                        Desactivar
-                      </button>
-                    </div>
-                  </td>
+                  ) : (
+                    <span className="text-xs font-semibold px-2 py-1 rounded-lg flex-shrink-0" style={{ background: '#0a1220', color: '#3a5070' }}>
+                      Sin asignar
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-1.5 mb-3">
+                  {student.practice_types.map(type => (
+                    <span key={type} className="text-xs px-2.5 py-1 rounded-full font-bold"
+                      style={{
+                        background: type === 'car' ? '#0057B820' : type === 'truck' ? '#38bdf820' : '#a78bfa20',
+                        color: type === 'car' ? '#0057B8' : type === 'truck' ? '#38bdf8' : '#a78bfa',
+                      }}>
+                      {getPracticeLabel(type)}
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Link href={`/admin/alumnos/${student.id}`}
+                    className="flex-1 text-center text-xs py-2 rounded-lg font-semibold"
+                    style={{ background: '#0f1c2e', color: '#a0b8d0' }}>
+                    Ver perfil
+                  </Link>
+                  <button onClick={() => copyLink(student.token)}
+                    className="flex-1 text-xs py-2 rounded-lg font-semibold"
+                    style={{ background: '#0057B820', color: '#0057B8' }}>
+                    {copied === student.token ? '✓ Copiado' : '🔗 Enlace'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Vista escritorio — tabla */}
+          <div className="hidden md:block rounded-2xl overflow-hidden" style={{ background: '#0d1829', border: '1px solid #1a2d45' }}>
+            <table className="w-full">
+              <thead>
+                <tr style={{ borderBottom: '1px solid #1a2d45' }}>
+                  {['#', 'Alumno', 'DNI', 'Prácticas', 'Instructor', 'Alta', ''].map(h => (
+                    <th key={h} className="text-left px-5 py-4 text-xs font-bold uppercase tracking-wider" style={{ color: '#3a5070' }}>{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filtered.map((student, idx) => (
+                  <tr key={student.id}
+                    style={{ borderBottom: idx < filtered.length - 1 ? '1px solid #0f1c2e' : 'none' }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#0f1c2e'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                  >
+                    <td className="px-5 py-4">
+                      <span className="text-xs font-black font-mono px-2 py-1 rounded-lg" style={{ background: '#0057B820', color: '#0057B8' }}>
+                        {student.order_number}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4">
+                      <p className="text-white font-bold text-sm">{student.full_name}</p>
+                      {student.phone && <p className="text-xs mt-0.5" style={{ color: '#3a5070' }}>{student.phone}</p>}
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className="text-xs font-mono px-2 py-1 rounded-lg" style={{ background: '#0f1c2e', color: '#6b8ab0' }}>{student.dni}</span>
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="flex gap-1.5">
+                        {student.practice_types.map(type => (
+                          <span key={type} className="text-xs px-2.5 py-1 rounded-full font-bold"
+                            style={{
+                              background: type === 'car' ? '#0057B820' : type === 'truck' ? '#38bdf820' : '#a78bfa20',
+                              color: type === 'car' ? '#0057B8' : type === 'truck' ? '#38bdf8' : '#a78bfa',
+                            }}>
+                            {getPracticeLabel(type)}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4">
+                      {student.instructor ? (
+                        <span className="text-xs font-semibold px-2.5 py-1 rounded-lg" style={{ background: 'rgba(0,87,184,0.1)', color: '#60a5fa' }}>{student.instructor.name}</span>
+                      ) : (
+                        <span className="text-xs font-semibold px-2.5 py-1 rounded-lg" style={{ background: '#0a1220', color: '#3a5070' }}>Sin asignar</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-4 text-sm" style={{ color: '#3a5070' }}>{formatDate(student.created_at.split('T')[0])}</td>
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-2 justify-end">
+                        <Link href={`/admin/alumnos/${student.id}`}
+                          className="text-xs px-3 py-1.5 rounded-lg font-semibold transition-all duration-150"
+                          style={{ background: '#0f1c2e', color: '#a0b8d0' }}
+                          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#1a2d45'}
+                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#0f1c2e'}>
+                          Ver perfil
+                        </Link>
+                        <button onClick={() => copyLink(student.token)}
+                          className="text-xs px-3 py-1.5 rounded-lg font-semibold transition-all duration-150"
+                          style={{ background: '#0057B820', color: '#0057B8' }}
+                          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#0057B840'}
+                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#0057B820'}>
+                          {copied === student.token ? '✓ Copiado' : '🔗 Enlace'}
+                        </button>
+                        <button onClick={() => deactivateStudent(student.id)}
+                          className="text-xs px-3 py-1.5 rounded-lg font-semibold transition-all duration-150"
+                          style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171' }}
+                          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.2)'}
+                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.1)'}>
+                          Desactivar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   )

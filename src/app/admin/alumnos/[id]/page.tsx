@@ -130,7 +130,7 @@ export default function AlumnoPerfilPage() {
   const lastBooking = bookings.find(b => b.status === 'completed')
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className="px-4 py-6 md:p-8 max-w-4xl">
 
       {/* Cabecera */}
       <div className="flex items-center gap-4 mb-8">
@@ -163,7 +163,7 @@ export default function AlumnoPerfilPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
         {/* Columna izquierda — datos */}
         <div className="col-span-1 space-y-4">
@@ -441,7 +441,7 @@ export default function AlumnoPerfilPage() {
         <div className="col-span-2 space-y-4">
 
           {/* Stats */}
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
               { label: 'Total', value: totalBookings, color: 'white' },
               { label: 'Completadas', value: completedBookings, color: '#34d399' },

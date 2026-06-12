@@ -95,15 +95,15 @@ export default function CalendarioPage() {
   const firstDay = getFirstDayOfMonth(currentYear, currentMonth)
 
   return (
-    <div className="p-8">
+    <div className="px-4 py-6 md:p-8">
 
       {/* Cabecera */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-3 mb-6 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-sm font-medium mb-1" style={{ color: '#0057B8' }}>Agenda</p>
           <h1 className="text-3xl font-black text-white tracking-tight">Calendario</h1>
         </div>
-        <div className="flex gap-1 rounded-xl p-1" style={{ background: '#0d1829', border: '1px solid #1a2d45' }}>
+        <div className="flex gap-1 rounded-xl p-1 self-start" style={{ background: '#0d1829', border: '1px solid #1a2d45' }}>
           {(['all', 'car', 'truck', 'moto'] as const).map(f => (
             <button
               key={f}
@@ -120,7 +120,7 @@ export default function CalendarioPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
         {/* Calendario mensual */}
         <div className="rounded-2xl overflow-hidden" style={{ background: '#0d1829', border: '1px solid #1a2d45' }}>

@@ -48,10 +48,10 @@ function buildInstructorEmail(
 
 export async function POST(req: NextRequest) {
   try {
-    const { instructorId, studentName, practiceDate, startTime, practiceType, practiceSubtype, pickupLocation, action } =
+    const { instructorId, studentId, studentToken, studentName, practiceDate, startTime, practiceType, practiceSubtype, pickupLocation, action } =
       await req.json()
 
-    if (!instructorId || !studentName || !practiceDate || !startTime || !practiceType || !action) {
+    if (!instructorId || !studentId || !studentToken || !studentName || !practiceDate || !startTime || !practiceType || !action) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -59,6 +59,18 @@ export async function POST(req: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
+
+    // Verificar que el token pertenece al alumno que hace la acción
+    const { data: caller } = await supabase
+      .from('students')
+      .select('id')
+      .eq('id', studentId)
+      .eq('token', studentToken)
+      .single()
+
+    if (!caller) {
+      return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+    }
 
     const { data: instructor } = await supabase
       .from('instructors')

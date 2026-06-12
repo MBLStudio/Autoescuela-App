@@ -57,10 +57,10 @@ export default function AdminPage() {
   const completedCount = bookings.filter(b => b.status === 'completed').length
 
   return (
-    <div className="p-8">
+    <div className="px-4 py-6 md:p-8">
 
       {/* Cabecera */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6 md:mb-8">
         <div>
           <p className="text-sm font-medium mb-1" style={{ color: '#0057B8' }}>Panel de control</p>
           <h1 className="text-3xl font-black text-white tracking-tight">
@@ -83,7 +83,7 @@ export default function AdminPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-3 md:grid-cols-5 gap-3 md:gap-4 mb-6 md:mb-8">
         {[
           { label: 'Total hoy', value: bookings.length, color: 'white' },
           { label: 'Coche', value: carCount, color: '#0057B8' },
@@ -91,9 +91,9 @@ export default function AdminPage() {
           { label: 'Moto', value: motoCount, color: '#a78bfa' },
           { label: 'Completadas', value: completedCount, color: '#34d399' },
         ].map(stat => (
-          <div key={stat.label} className="rounded-2xl p-5" style={{ background: '#0d1829', border: '1px solid #1a2d45' }}>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#6b8ab0' }}>{stat.label}</p>
-            <p className="text-4xl font-black" style={{ color: stat.color }}>{stat.value}</p>
+          <div key={stat.label} className="rounded-2xl p-3 md:p-5" style={{ background: '#0d1829', border: '1px solid #1a2d45' }}>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-1 md:mb-2 leading-tight" style={{ color: '#6b8ab0' }}>{stat.label}</p>
+            <p className="text-3xl md:text-4xl font-black" style={{ color: stat.color }}>{stat.value}</p>
           </div>
         ))}
       </div>

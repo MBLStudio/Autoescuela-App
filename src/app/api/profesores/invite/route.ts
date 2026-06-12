@@ -6,18 +6,14 @@ export async function POST(req: NextRequest) {
   const user = await getSessionUser()
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   if (!isAdmin(user)) return NextResponse.json({ error: 'Prohibido' }, { status: 403 })
-  const { name, email, password } = await req.json()
+  const { name, email } = await req.json()
 
-  if (!name || !email || !password) {
-    return NextResponse.json({ error: 'Nombre, email y contraseña son obligatorios' }, { status: 400 })
+  if (!name || !email) {
+    return NextResponse.json({ error: 'Nombre y email son obligatorios' }, { status: 400 })
   }
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return NextResponse.json({ error: 'El formato del email no es válido' }, { status: 400 })
-  }
-
-  if (password.length < 8) {
-    return NextResponse.json({ error: 'La contraseña debe tener al menos 8 caracteres' }, { status: 400 })
   }
 
   const supabaseAdmin = createClient(
@@ -26,11 +22,8 @@ export async function POST(req: NextRequest) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 
-  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: { full_name: name },
+  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+    data: { full_name: name },
   })
 
   if (authError) {

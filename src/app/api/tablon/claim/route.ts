@@ -24,13 +24,18 @@ export async function POST(req: NextRequest) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 
-  const { error } = await supabaseAdmin
+  const { data: claimed, error } = await supabaseAdmin
     .from('students')
     .update({ instructor_id: instructorId })
     .eq('id', studentId)
     .is('instructor_id', null)
+    .select('id')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  if (!claimed || claimed.length === 0) {
+    return NextResponse.json({ error: 'Este alumno ya fue reclamado por otro instructor' }, { status: 409 })
+  }
 
   // Devolver nombre del instructor para la notificación al alumno
   const { data: instructor } = await supabaseAdmin

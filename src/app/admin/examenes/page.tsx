@@ -93,7 +93,7 @@ export default function ExamenesPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="px-4 py-6 md:p-8">
 
       {/* Cabecera */}
       <div className="flex items-center justify-between mb-8">
@@ -117,16 +117,16 @@ export default function ExamenesPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
         {[
           { label: 'Total', value: exams.length, color: 'white' },
           { label: 'Aprobados', value: passedCount, color: '#34d399' },
           { label: 'Suspendidos', value: failedCount, color: '#f87171' },
           { label: 'Tasa aprobado', value: `${passRate}%`, color: '#0057B8' },
         ].map(stat => (
-          <div key={stat.label} className="rounded-2xl p-5" style={{ background: '#0d1829', border: '1px solid #1a2d45' }}>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#3a5070' }}>{stat.label}</p>
-            <p className="text-4xl font-black" style={{ color: stat.color }}>{stat.value}</p>
+          <div key={stat.label} className="rounded-2xl p-3 md:p-5" style={{ background: '#0d1829', border: '1px solid #1a2d45' }}>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-1 md:mb-2 leading-tight" style={{ color: '#3a5070' }}>{stat.label}</p>
+            <p className="text-3xl md:text-4xl font-black" style={{ color: stat.color }}>{stat.value}</p>
           </div>
         ))}
       </div>
