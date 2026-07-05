@@ -2,17 +2,25 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 export default function AlumnoLoginPage() {
   const router = useRouter()
-  const [loginCode, setLoginCode] = useState('')
-  const [loginPin, setLoginPin] = useState('')
+  const [dni, setDni] = useState('')
+  const [pin, setPin] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   async function handleLogin() {
-    if (!loginCode.trim() || !loginPin.trim()) {
-      setError('Introduce tu código y PIN')
+    const cleanDni = dni.trim().toUpperCase()
+    const cleanPin = pin.trim()
+
+    if (!cleanDni || !cleanPin) {
+      setError('Introduce tu DNI y PIN')
+      return
+    }
+    if (cleanPin.length !== 4) {
+      setError('El PIN son los últimos 4 dígitos de tu DNI')
       return
     }
 
@@ -22,13 +30,13 @@ export default function AlumnoLoginPage() {
     const res = await fetch('/api/alumno/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ login_code: loginCode.trim(), login_pin: loginPin.trim() }),
+      body: JSON.stringify({ dni: cleanDni, pin: cleanPin }),
     })
 
     const data = await res.json()
 
     if (!res.ok || data.error) {
-      setError(data.error ?? 'Error al iniciar sesión')
+      setError(data.error ?? 'DNI o PIN incorrectos')
       setLoading(false)
       return
     }
@@ -37,127 +45,104 @@ export default function AlumnoLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex" style={{ background: '#0a0f1a' }}>
+    <main className="min-h-screen flex flex-col items-center justify-center px-5 py-12" style={{ background: '#0a0f1a' }}>
 
-      {/* Panel izquierdo */}
-      <div className="hidden lg:flex flex-col justify-between w-1/2 p-12" style={{ background: '#0057B8' }}>
+      {/* Logo */}
+      <div className="flex items-center gap-3 mb-10">
+        <div className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: '#0057B8' }}>
+          <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 13l1.5-4.5A2 2 0 016.4 7h11.2a2 2 0 011.9 1.5L21 13M3 13v5a1 1 0 001 1h1a2 2 0 004 0h8a2 2 0 004 0h1a1 1 0 001-1v-5M3 13h18" />
+          </svg>
+        </div>
         <div>
-          <div className="flex items-center gap-3 mb-12">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.15)' }}>
-              <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="white" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-white font-black text-lg leading-none">AUTO-ESCUELA</p>
-              <p className="text-white text-sm opacity-70 leading-none">BAHILLO · Palencia</p>
-            </div>
-          </div>
-          <h2 className="text-white font-black text-4xl leading-tight mb-4">
-            Tu panel<br />de prácticas
-          </h2>
-          <p className="text-white opacity-70 text-lg">
-            Reserva, cancela y consulta tu historial de clases desde aquí.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          {[
-            { label: 'Reservas online', desc: 'Elige día y hora' },
-            { label: 'Sin llamadas', desc: 'Todo desde el móvil' },
-            { label: 'Historial', desc: 'Consulta tus prácticas' },
-            { label: '24/7', desc: 'Disponible siempre' },
-          ].map(item => (
-            <div key={item.label} className="rounded-xl p-4" style={{ background: 'rgba(255,255,255,0.1)' }}>
-              <p className="text-white font-bold text-sm">{item.label}</p>
-              <p className="text-white opacity-60 text-xs mt-0.5">{item.desc}</p>
-            </div>
-          ))}
+          <p className="text-white font-black text-base leading-none tracking-tight">AUTO-ESCUELA BAHILLO</p>
+          <p className="text-xs mt-0.5" style={{ color: '#3a5070' }}>Palencia</p>
         </div>
       </div>
 
-      {/* Panel derecho — formulario */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-sm">
+      <div className="w-full max-w-sm">
 
-          {/* Logo mobile */}
-          <div className="flex items-center gap-3 mb-8 lg:hidden">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: '#0057B8' }}>
-              <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="white" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-white font-black text-base leading-none">AUTO-ESCUELA BAHILLO</p>
-              <p className="text-xs leading-none" style={{ color: '#3a5070' }}>Palencia</p>
-            </div>
+        <Link
+          href="/"
+          className="flex items-center gap-2 mb-6 text-sm font-semibold transition"
+          style={{ color: '#6b8ab0' }}
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+          Volver
+        </Link>
+
+        <h1 className="text-2xl font-black text-white mb-1">Acceso alumnos</h1>
+        <p className="text-sm mb-8" style={{ color: '#6b8ab0' }}>Introduce tu DNI para acceder a tus prácticas</p>
+
+        <div className="space-y-4">
+
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: '#a0b8d0' }}>DNI</label>
+            <input
+              type="text"
+              value={dni}
+              onChange={e => setDni(e.target.value.toUpperCase())}
+              onKeyDown={e => e.key === 'Enter' && handleLogin()}
+              placeholder="12345678Z"
+              maxLength={9}
+              className="w-full rounded-xl px-4 py-3.5 text-white text-sm font-mono outline-none transition-all tracking-widest"
+              style={{ background: '#0d1829', border: '1.5px solid #1a2d45' }}
+              onFocus={e => e.target.style.borderColor = '#0057B8'}
+              onBlur={e => e.target.style.borderColor = '#1a2d45'}
+            />
           </div>
 
-          <h1 className="text-3xl font-black text-white mb-1">Bienvenido</h1>
-          <p className="text-sm mb-8" style={{ color: '#6b8ab0' }}>Accede a tu área de alumno</p>
-
-          <div className="space-y-4">
-
-            <div>
-              <label className="block text-xs font-semibold mb-1.5" style={{ color: '#a0b8d0' }}>
-                Código de alumno
-              </label>
-              <input
-                type="text"
-                value={loginCode}
-                onChange={e => setLoginCode(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                placeholder="Alumno-001"
-                className="w-full rounded-xl px-4 py-3.5 text-white text-sm font-mono outline-none transition-all"
-                style={{ background: '#0d1829', border: '1.5px solid #1a2d45' }}
-                onFocus={e => e.target.style.borderColor = '#0057B8'}
-                onBlur={e => e.target.style.borderColor = '#1a2d45'}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold mb-1.5" style={{ color: '#a0b8d0' }}>
-                PIN
-              </label>
-              <input
-                type="password"
-                value={loginPin}
-                onChange={e => setLoginPin(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                placeholder="••••"
-                className="w-full rounded-xl px-4 py-3.5 text-white text-sm outline-none transition-all"
-                style={{ background: '#0d1829', border: '1.5px solid #1a2d45' }}
-                onFocus={e => e.target.style.borderColor = '#0057B8'}
-                onBlur={e => e.target.style.borderColor = '#1a2d45'}
-              />
-            </div>
-
-            {error && (
-              <div className="rounded-xl px-4 py-3 text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171' }}>
-                {error}
-              </div>
-            )}
-
-            <button
-              onClick={handleLogin}
-              disabled={loading}
-              className="w-full py-3.5 rounded-xl text-sm font-bold text-white transition-all duration-200 mt-2"
-              style={{ background: loading ? '#1a2d45' : '#0057B8', color: loading ? '#3a5070' : 'white' }}
-              onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLElement).style.background = '#004494' }}
-              onMouseLeave={e => { if (!loading) (e.currentTarget as HTMLElement).style.background = '#0057B8' }}
-            >
-              {loading ? 'Entrando...' : 'Entrar'}
-            </button>
-
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: '#a0b8d0' }}>
+              PIN <span style={{ color: '#3a5070', fontWeight: 400 }}>— últimos 4 dígitos de tu DNI</span>
+            </label>
+            <input
+              type="password"
+              value={pin}
+              onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              onKeyDown={e => e.key === 'Enter' && handleLogin()}
+              placeholder="••••"
+              inputMode="numeric"
+              maxLength={4}
+              className="w-full rounded-xl px-4 py-3.5 text-white text-sm outline-none transition-all tracking-widest"
+              style={{ background: '#0d1829', border: '1.5px solid #1a2d45' }}
+              onFocus={e => e.target.style.borderColor = '#0057B8'}
+              onBlur={e => e.target.style.borderColor = '#1a2d45'}
+            />
+            <p className="text-xs mt-1.5" style={{ color: '#3a5070' }}>
+              Ej: DNI <span style={{ color: '#6b8ab0' }}>12345</span><span className="font-bold" style={{ color: '#0057B8' }}>6789</span>Z → PIN <span className="font-bold" style={{ color: '#0057B8' }}>6789</span>
+            </p>
           </div>
 
-          <p className="text-xs text-center mt-6" style={{ color: '#3a5070' }}>
-            Tu código y PIN te los proporciona la autoescuela
-          </p>
+          {error && (
+            <div className="rounded-xl px-4 py-3 text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171' }}>
+              {error}
+            </div>
+          )}
+
+          <button
+            onClick={handleLogin}
+            disabled={loading || !dni || pin.length < 4}
+            className="w-full py-3.5 rounded-xl text-sm font-bold text-white transition-all duration-200"
+            style={{
+              background: loading || !dni || pin.length < 4 ? '#1a2d45' : '#0057B8',
+              color: loading || !dni || pin.length < 4 ? '#4a6080' : 'white',
+            }}
+            onMouseEnter={e => { if (!loading && dni && pin.length === 4) (e.currentTarget as HTMLElement).style.background = '#004494' }}
+            onMouseLeave={e => { if (!loading && dni && pin.length === 4) (e.currentTarget as HTMLElement).style.background = '#0057B8' }}
+          >
+            {loading ? 'Entrando...' : 'Entrar'}
+          </button>
 
         </div>
-      </div>
 
-    </div>
+        <p className="text-xs text-center mt-6" style={{ color: '#3a5070' }}>
+          ¿Problemas para acceder? Contacta con la autoescuela
+        </p>
+
+      </div>
+    </main>
   )
 }

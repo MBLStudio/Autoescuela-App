@@ -4,12 +4,21 @@ import { createClient } from '@supabase/supabase-js'
 const MAX_ATTEMPTS = 10
 const WINDOW_MINUTES = 15
 
-export async function POST(req: NextRequest) {
-  const { login_code, login_pin } = await req.json()
+function getPinFromDni(dni: string): string {
+  // Extrae los últimos 4 dígitos numéricos del DNI
+  // Ej: "12345678Z" → "5678"
+  return dni.replace(/\D/g, '').slice(-4)
+}
 
-  if (!login_code || !login_pin) {
-    return NextResponse.json({ error: 'Código y PIN son obligatorios' }, { status: 400 })
+export async function POST(req: NextRequest) {
+  const { dni, pin } = await req.json()
+
+  if (!dni || !pin) {
+    return NextResponse.json({ error: 'DNI y PIN son obligatorios' }, { status: 400 })
   }
+
+  const cleanDni = String(dni).trim().toUpperCase()
+  const cleanPin = String(pin).trim()
 
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,21 +45,23 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // Buscar alumno por DNI
   const { data: student } = await supabaseAdmin
     .from('students')
-    .select('token, is_active, login_code, login_pin')
-    .eq('login_code', login_code.trim())
-    .eq('login_pin', login_pin.trim())
+    .select('token, is_active, dni')
+    .ilike('dni', cleanDni)
     .single()
 
-  if (!student) {
-    // Registrar intento fallido
+  // Validar PIN = últimos 4 dígitos numéricos del DNI
+  const validPin = student ? getPinFromDni(student.dni) : null
+  const pinOk = validPin !== null && validPin.length === 4 && cleanPin === validPin
+
+  if (!student || !pinOk) {
     await supabaseAdmin.from('login_attempts').insert({ ip_address: ip })
-    // Limpiar intentos viejos (best-effort, sin await)
     supabaseAdmin.from('login_attempts')
       .delete()
       .lt('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
-    return NextResponse.json({ error: 'Código o PIN incorrectos' }, { status: 401 })
+    return NextResponse.json({ error: 'DNI o PIN incorrectos' }, { status: 401 })
   }
 
   if (!student.is_active) {
