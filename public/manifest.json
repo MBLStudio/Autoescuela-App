@@ -2,7 +2,7 @@
   "name": "Auto-Escuela Bahillo",
   "short_name": "AE Bahillo",
   "description": "Reserva y gestiona tus prácticas de conducción",
-  "start_url": "/alumno",
+  "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0a0f1a",
