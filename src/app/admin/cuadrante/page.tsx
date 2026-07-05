@@ -428,12 +428,6 @@ function WeekView({
 
       {/* Detalle celda expandida */}
       {expandedCell && (() => {
-        const [instructorId, dateStr] = expandedCell.split('-').reduce((acc, part, i, arr) => {
-          if (i < 36) return [arr.slice(0, 36).join('-'), arr.slice(36).join('-')]
-          return acc
-        }, ['', ''] as [string, string])
-
-        // Parse correctamente el cellKey que es instructorId-YYYY-MM-DD
         const parts = expandedCell.split('-')
         const date = parts.slice(-3).join('-')
         const instId = parts.slice(0, -3).join('-')

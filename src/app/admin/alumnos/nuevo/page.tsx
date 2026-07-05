@@ -31,6 +31,10 @@ export default function NuevoAlumnoPage() {
       setError('DNI, nombre y número de orden son obligatorios')
       return
     }
+    if (!/^[0-9]{8}[A-Z]$/i.test(dni.trim())) {
+      setError('El DNI debe tener 8 números seguidos de una letra (ej: 12345678Z)')
+      return
+    }
     if (practiceTypes.length === 0) {
       setError('Selecciona al menos un tipo de práctica')
       return
