@@ -14,7 +14,6 @@ export default function AdminSecretariaPage() {
   const [showForm, setShowForm] = useState(false)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -35,12 +34,8 @@ export default function AdminSecretariaPage() {
   }
 
   async function handleCreate() {
-    if (!name.trim() || !email.trim() || !password) {
-      setError('Nombre, email y contraseña son obligatorios')
-      return
-    }
-    if (password.length < 8) {
-      setError('La contraseña debe tener al menos 8 caracteres')
+    if (!name.trim() || !email.trim()) {
+      setError('Nombre y email son obligatorios')
       return
     }
     setSaving(true)
@@ -49,7 +44,7 @@ export default function AdminSecretariaPage() {
     const res = await fetch('/api/secretaria/invite', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name.trim(), email: email.trim(), password }),
+      body: JSON.stringify({ name: name.trim(), email: email.trim() }),
     })
     const data = await res.json()
 
@@ -62,7 +57,6 @@ export default function AdminSecretariaPage() {
     setSuccess(true)
     setName('')
     setEmail('')
-    setPassword('')
     setSaving(false)
     await fetchSecretaries()
     setTimeout(() => { setSuccess(false); setShowForm(false) }, 2500)
@@ -116,15 +110,17 @@ export default function AdminSecretariaPage() {
           </div>
 
           {success ? (
-            <div className="rounded-xl px-4 py-3 text-sm font-semibold text-center" style={{ background: 'rgba(52,211,153,0.1)', color: '#34d399' }}>
-              ✓ Cuenta creada correctamente
+            <div className="rounded-xl px-4 py-4 text-center" style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)' }}>
+              <p className="font-bold text-sm" style={{ color: '#34d399' }}>¡Cuenta creada!</p>
+              <p className="text-xs mt-1" style={{ color: '#34d399', opacity: 0.7 }}>
+                Las credenciales han sido enviadas a {email || 'su email'}.
+              </p>
             </div>
           ) : (
             <>
               {[
                 { label: 'Nombre completo', value: name, setter: setName, type: 'text', placeholder: 'María López' },
                 { label: 'Email', value: email, setter: setEmail, type: 'email', placeholder: 'secretaria@autoescuela.com' },
-                { label: 'Contraseña', value: password, setter: setPassword, type: 'password', placeholder: 'Mínimo 8 caracteres' },
               ].map(({ label, value, setter, type, placeholder }) => (
                 <div key={label}>
                   <label className="block text-xs font-semibold mb-1.5" style={{ color: '#a0b8d0' }}>{label}</label>
@@ -149,11 +145,11 @@ export default function AdminSecretariaPage() {
 
               <button
                 onClick={handleCreate}
-                disabled={saving}
+                disabled={saving || !name || !email}
                 className="w-full py-3 rounded-xl text-sm font-bold text-white transition"
-                style={{ background: saving ? '#1a2d45' : '#0057B8' }}
+                style={{ background: saving || !name || !email ? '#1a2d45' : '#0057B8', color: saving || !name || !email ? '#3a5070' : 'white' }}
               >
-                {saving ? 'Creando cuenta...' : 'Crear cuenta'}
+                {saving ? 'Creando...' : 'Crear cuenta y enviar credenciales'}
               </button>
             </>
           )}

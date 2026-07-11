@@ -24,6 +24,10 @@ export default function LandingPage() {
       setLoading(false)
       return
     }
+    if (authData.user.user_metadata?.must_change_password) {
+      return router.push('/cambiar-contrasena')
+    }
+
     const { data: staff } = await supabase
       .from('staff')
       .select('role')
