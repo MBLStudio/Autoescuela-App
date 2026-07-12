@@ -14,6 +14,7 @@ export default function AlumnoPerfilPage() {
   const supabase = createClient()
 
   const [student, setStudent] = useState<Student | null>(null)
+  const [instructorName, setInstructorName] = useState<string | null>(null)
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
@@ -34,10 +35,11 @@ export default function AlumnoPerfilPage() {
   async function fetchData() {
     setLoading(true)
     const [{ data: studentData }, { data: bookingsData }] = await Promise.all([
-      supabase.from('students').select('*').eq('id', id).single(),
+      supabase.from('students').select('*, instructor:instructors(name)').eq('id', id).single(),
       supabase.from('bookings').select('*').eq('student_id', id).order('practice_date', { ascending: false }),
     ])
     if (!studentData) { router.push('/admin/alumnos'); return }
+    setInstructorName((studentData as any).instructor?.name ?? null)
     setStudent(studentData)
     setPhone(studentData.phone ?? '')
     setEmail(studentData.email ?? '')
@@ -167,6 +169,34 @@ export default function AlumnoPerfilPage() {
 
         {/* Columna izquierda — datos */}
         <div className="col-span-1 space-y-4">
+
+          {/* Instructor asignado */}
+          <div className="rounded-2xl p-5" style={{ background: '#0d1829', border: `1px solid ${instructorName ? '#0057B840' : '#1a2d45'}` }}>
+            <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: '#0057B8' }}>Instructor</p>
+            {instructorName ? (
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm flex-shrink-0" style={{ background: '#0057B820', color: '#0057B8' }}>
+                  {instructorName.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-white font-bold text-sm">{instructorName}</p>
+                  <p className="text-xs mt-0.5" style={{ color: '#3a5070' }}>Instructor asignado</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#0f1c2e' }}>
+                  <svg className="w-4 h-4" style={{ color: '#3a5070' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: '#3a5070' }}>Sin asignar</p>
+                  <p className="text-xs mt-0.5" style={{ color: '#1a2d45' }}>Pendiente en el tablón</p>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Datos personales */}
           <div className="rounded-2xl p-5 space-y-4" style={{ background: '#0d1829', border: '1px solid #1a2d45' }}>

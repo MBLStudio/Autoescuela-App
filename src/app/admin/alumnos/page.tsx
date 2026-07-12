@@ -117,12 +117,15 @@ export default function AlumnosPage() {
                     </div>
                   </div>
                   {student.instructor ? (
-                    <span className="text-xs font-semibold px-2 py-1 rounded-lg flex-shrink-0" style={{ background: 'rgba(0,87,184,0.1)', color: '#60a5fa' }}>
-                      {student.instructor.name.split(' ')[0]}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-black" style={{ background: '#0057B820', color: '#0057B8' }}>
+                        {student.instructor.name.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="text-xs font-semibold text-white">{student.instructor.name.split(' ')[0]}</span>
+                    </div>
                   ) : (
-                    <span className="text-xs font-semibold px-2 py-1 rounded-lg flex-shrink-0" style={{ background: '#0a1220', color: '#3a5070' }}>
-                      Sin asignar
+                    <span className="text-xs font-bold px-2 py-1 rounded-full flex-shrink-0" style={{ background: 'rgba(251,191,36,0.1)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.2)' }}>
+                      ⏳ Sin asignar
                     </span>
                   )}
                 </div>
@@ -197,9 +200,16 @@ export default function AlumnosPage() {
                     </td>
                     <td className="px-5 py-4">
                       {student.instructor ? (
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-lg" style={{ background: 'rgba(0,87,184,0.1)', color: '#60a5fa' }}>{student.instructor.name}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0" style={{ background: '#0057B820', color: '#0057B8' }}>
+                            {student.instructor.name.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="text-sm font-semibold text-white">{student.instructor.name.split(' ')[0]}</span>
+                        </div>
                       ) : (
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-lg" style={{ background: '#0a1220', color: '#3a5070' }}>Sin asignar</span>
+                        <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ background: 'rgba(251,191,36,0.1)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.2)' }}>
+                          ⏳ Sin asignar
+                        </span>
                       )}
                     </td>
                     <td className="px-5 py-4 text-sm" style={{ color: '#3a5070' }}>{formatDate(student.created_at.split('T')[0])}</td>
