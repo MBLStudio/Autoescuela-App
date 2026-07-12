@@ -309,84 +309,34 @@ export default function StudentPage() {
     setSubmitting(true)
     setSubmitError('')
 
-    // Comprobar límite de reservas activas simultáneas
-    if (student.max_concurrent_bookings) {
-      const { data: activeBookings } = await supabase
-        .from('bookings')
-        .select('id')
-        .eq('student_id', student.id)
-        .eq('status', 'confirmed')
-      if (activeBookings && activeBookings.length >= student.max_concurrent_bookings) {
-        setSubmitError(`Tienes el máximo de ${student.max_concurrent_bookings} reservas activas permitidas.`)
-        setSubmitting(false)
-        return
-      }
-    }
-
-    // Comprobar límite diario (1 normal, 2 en modo examen)
-    const maxDaily = student.exam_mode ? 2 : 1
-    const { data: sameDayBookings } = await supabase
-      .from('bookings')
-      .select('id')
-      .eq('student_id', student.id)
-      .eq('status', 'confirmed')
-      .eq('practice_date', selectedDate)
-
-    if (sameDayBookings && sameDayBookings.length >= maxDaily) {
-      const msg = student.exam_mode
-        ? 'Ya tienes 2 prácticas reservadas ese día (límite en modo examen).'
-        : 'Ya tienes una práctica reservada ese día.'
-      setSubmitError(msg)
-      setSubmitting(false)
-      return
-    }
-
-    // Comprobar límite semanal
-    const { from: weekFrom, to: weekTo } = getWeekBounds(selectedDate)
-    const { data: weekBookings } = await supabase
-      .from('bookings')
-      .select('id')
-      .eq('student_id', student.id)
-      .eq('status', 'confirmed')
-      .gte('practice_date', weekFrom)
-      .lte('practice_date', weekTo)
-
-    const maxWeekly = student.max_weekly_bookings ?? 5
-    if (weekBookings && weekBookings.length >= maxWeekly) {
-      setSubmitError(`Has alcanzado el límite de ${maxWeekly} prácticas esta semana.`)
-      setSubmitting(false)
-      return
-    }
-
     const [h, m] = selectedSlot.split(':').map(Number)
     const duration = getDuration(selectedType, selectedSubtype)
     const endMinutes = h * 60 + m + duration
     const endTime = `${String(Math.floor(endMinutes / 60)).padStart(2, '0')}:${String(endMinutes % 60).padStart(2, '0')}`
 
-    const { data: newBooking, error } = await supabase
-      .from('bookings')
-      .insert({
-        student_id: student.id,
-        instructor_id: student.instructor_id,
-        practice_date: selectedDate,
-        start_time: selectedSlot,
-        end_time: endTime,
-        practice_type: selectedType,
-        practice_subtype: selectedSubtype,
-        pickup_location: selectedLocation || null,
-        status: 'confirmed',
-      })
-      .select('id')
-      .single()
+    const res = await fetch('/api/booking/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token,
+        studentId: student.id,
+        practiceDate: selectedDate,
+        startTime: selectedSlot,
+        endTime,
+        practiceType: selectedType,
+        practiceSubtype: selectedSubtype,
+        pickupLocation: selectedLocation || null,
+      }),
+    })
+    const result = await res.json()
 
-    if (error) {
-      const msg = error.code === '23505'
-        ? 'Ese hueco acaba de ser reservado por otro alumno. Elige otro.'
-        : 'No se pudo confirmar la reserva. Inténtalo de nuevo.'
-      setSubmitError(msg)
+    if (!res.ok) {
+      setSubmitError(result.error ?? 'No se pudo confirmar la reserva. Inténtalo de nuevo.')
       setSubmitting(false)
       return
     }
+
+    const newBooking = { id: result.bookingId }
 
     if (newBooking?.id) {
       fetch('/api/calendar', {
