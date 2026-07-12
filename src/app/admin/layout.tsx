@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const navItems = [
   {
@@ -111,10 +111,12 @@ const SidebarContent = ({
   pathname,
   onNavigate,
   onLogout,
+  tablonCount,
 }: {
   pathname: string
   onNavigate: () => void
   onLogout: () => void
+  tablonCount: number
 }) => (
   <>
     {/* Logo */}
@@ -164,7 +166,15 @@ const SidebarContent = ({
             onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
           >
             {item.icon}
-            {item.label}
+            <span className="flex-1">{item.label}</span>
+            {item.href === '/admin/tablon' && tablonCount > 0 && (
+              <span
+                className="text-xs font-black rounded-full flex items-center justify-center"
+                style={{ background: '#ef4444', color: 'white', minWidth: '20px', height: '20px', padding: '0 5px' }}
+              >
+                {tablonCount}
+              </span>
+            )}
           </Link>
         )
       })}
@@ -203,6 +213,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter()
   const supabase = createClient()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [tablonCount, setTablonCount] = useState(0)
+
+  useEffect(() => {
+    supabase
+      .from('students')
+      .select('id', { count: 'exact', head: true })
+      .is('instructor_id', null)
+      .eq('is_active', true)
+      .then(({ count }) => setTablonCount(count ?? 0))
+  }, [])
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -216,7 +236,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* ── SIDEBAR — solo escritorio ── */}
       <aside className="hidden md:flex w-60 flex-col fixed h-full" style={{ background: '#0d1829', borderRight: '1px solid #1a2d45' }}>
-        <SidebarContent pathname={pathname} onNavigate={() => {}} onLogout={handleLogout} />
+        <SidebarContent pathname={pathname} onNavigate={() => {}} onLogout={handleLogout} tablonCount={tablonCount} />
       </aside>
 
       {/* ── TOPBAR — solo móvil ── */}
@@ -273,6 +293,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               pathname={pathname}
               onNavigate={() => setMenuOpen(false)}
               onLogout={handleLogout}
+              tablonCount={tablonCount}
             />
           </div>
         </>
