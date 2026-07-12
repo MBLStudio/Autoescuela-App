@@ -754,6 +754,23 @@ export default function StudentPage() {
             Nueva reserva
           </p>
 
+          {/* Sin instructor asignado */}
+          {!student.instructor_id && (
+            <div className="rounded-2xl p-6 text-center" style={{ background: '#0d1829', border: '1px solid #1a2d45' }}>
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: '#0057B815', border: '1.5px solid #0057B830' }}>
+                <svg className="w-6 h-6" style={{ color: '#0057B8' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p className="text-white font-bold">Pendiente de asignación</p>
+              <p className="text-sm mt-2 leading-relaxed" style={{ color: '#6b8ab0' }}>
+                Aún no tienes instructor asignado.<br />Habla con la autoescuela para que te asignen uno.
+              </p>
+            </div>
+          )}
+
+          {student.instructor_id && (<>
+
           {/* ── Stepper de progreso ── */}
           {step !== 'success' && (
             <div className="flex items-start mb-5">
@@ -1102,6 +1119,7 @@ export default function StudentPage() {
               </button>
             </div>
           )}
+          </>)}
         </div>
       </div>
     </div>
