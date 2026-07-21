@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatTime, toDateString, getDayName, formatDate, getPracticeLabel, generateTimeSlots } from '@/lib/utils'
-import type { Booking, PracticeType, PracticeSubtype } from '@/types'
+import type { Booking, BlockedSlot, PracticeType, PracticeSubtype } from '@/types'
 
 const DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
@@ -27,6 +27,7 @@ export default function CalendarioPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [bookings, setBookings] = useState<Booking[]>([])
   const [blockedDays, setBlockedDays] = useState<string[]>([])
+  const [blockedSlots, setBlockedSlots] = useState<BlockedSlot[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'car' | 'truck' | 'moto'>('all')
 
@@ -38,32 +39,42 @@ export default function CalendarioPage() {
     const lastDay = getDaysInMonth(currentYear, currentMonth)
     const to = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
-    const [{ data: bookingsData }, { data: blockedData }] = await Promise.all([
+    const [{ data: bookingsData }, { data: blockedData }, { data: slotsData }] = await Promise.all([
       supabase
         .from('bookings')
         .select('*, student:students(full_name, order_number)')
         .gte('practice_date', from)
         .lte('practice_date', to)
-        .neq('status', 'cancelled')
         .order('start_time', { ascending: true }),
       supabase
         .from('blocked_days')
         .select('date')
         .gte('date', from)
         .lte('date', to),
+      supabase
+        .from('blocked_slots')
+        .select('*')
+        .gte('date', from)
+        .lte('date', to),
     ])
 
     if (bookingsData) setBookings(bookingsData)
     if (blockedData) setBlockedDays(blockedData.map(b => b.date))
+    if (slotsData) setBlockedSlots(slotsData)
     setLoading(false)
   }
 
-  function bookingsForDate(dateStr: string) {
+  function bookingsForDate(dateStr: string, status?: 'confirmed' | 'cancelled') {
     return bookings.filter(b => {
       const matchDate = b.practice_date === dateStr
       const matchFilter = filter === 'all' || b.practice_type === filter
-      return matchDate && matchFilter
+      const matchStatus = !status || b.status === status
+      return matchDate && matchFilter && matchStatus
     })
+  }
+
+  function hasSlotsBlocked(dateStr: string) {
+    return blockedSlots.some(s => s.date === dateStr)
   }
 
   function getFreeSlots(dateStr: string) {
@@ -164,7 +175,8 @@ export default function CalendarioPage() {
               const isToday = dateStr === toDateString(today)
               const isSelected = dateStr === selectedDate
               const isBlocked = blockedDays.includes(dateStr)
-              const dayBookings = bookingsForDate(dateStr)
+              const hasSlots = hasSlotsBlocked(dateStr)
+              const dayBookings = bookingsForDate(dateStr, 'confirmed')
               const carCount = dayBookings.filter(b => b.practice_type === 'car').length
               const truckCount = dayBookings.filter(b => b.practice_type === 'truck').length
               const motoCount = dayBookings.filter(b => b.practice_type === 'moto').length
@@ -172,16 +184,16 @@ export default function CalendarioPage() {
               return (
                 <button
                   key={day}
-                  onClick={() => !isBlocked && setSelectedDate(isSelected ? null : dateStr)}
+                  onClick={() => setSelectedDate(isSelected ? null : dateStr)}
                   className="rounded-xl p-1.5 transition-all duration-150 text-left"
                   style={{
                     background: isSelected ? '#0057B8' : isBlocked ? 'rgba(239,68,68,0.08)' : isToday ? '#0057B810' : 'transparent',
                     border: `1.5px solid ${isSelected ? '#0057B8' : isToday ? '#0057B840' : 'transparent'}`,
-                    cursor: isBlocked ? 'default' : 'pointer',
+                    cursor: 'pointer',
                     minHeight: '56px',
                   }}
-                  onMouseEnter={e => { if (!isBlocked && !isSelected) (e.currentTarget as HTMLElement).style.background = '#0057B810' }}
-                  onMouseLeave={e => { if (!isBlocked && !isSelected) (e.currentTarget as HTMLElement).style.background = isSelected ? '#0057B8' : isToday ? '#0057B810' : 'transparent' }}
+                  onMouseEnter={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = isBlocked ? 'rgba(239,68,68,0.15)' : '#0057B810' }}
+                  onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLElement).style.background = isBlocked ? 'rgba(239,68,68,0.08)' : isToday ? '#0057B810' : 'transparent' }}
                 >
                   <p className="text-xs font-black mb-1" style={{
                     color: isSelected ? 'white' : isBlocked ? '#f87171' : isToday ? '#0057B8' : isWeekend ? '#6b8ab0' : '#a0b8d0'
@@ -193,6 +205,11 @@ export default function CalendarioPage() {
                   )}
                   {!isBlocked && (
                     <div className="space-y-0.5">
+                      {hasSlots && (
+                        <div className="flex items-center gap-0.5">
+                          <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: isSelected ? 'rgba(255,165,0,0.7)' : '#f59e0b' }} />
+                        </div>
+                      )}
                       {carCount > 0 && (
                         <div className="flex items-center gap-0.5">
                           <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: isSelected ? 'rgba(255,255,255,0.7)' : '#0057B8' }} />
@@ -219,7 +236,7 @@ export default function CalendarioPage() {
           </div>
 
           {/* Leyenda */}
-          <div className="px-5 py-3 flex items-center gap-4" style={{ borderTop: '1px solid #1a2d45' }}>
+          <div className="px-5 py-3 flex flex-wrap items-center gap-4" style={{ borderTop: '1px solid #1a2d45' }}>
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full" style={{ background: '#0057B8' }} />
               <p className="text-xs" style={{ color: '#3a5070' }}>Coche</p>
@@ -233,8 +250,12 @@ export default function CalendarioPage() {
               <p className="text-xs" style={{ color: '#3a5070' }}>Moto</p>
             </div>
             <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full" style={{ background: '#f59e0b' }} />
+              <p className="text-xs" style={{ color: '#3a5070' }}>Franja bloqueada</p>
+            </div>
+            <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full" style={{ background: 'rgba(239,68,68,0.4)' }} />
-              <p className="text-xs" style={{ color: '#3a5070' }}>Bloqueado</p>
+              <p className="text-xs" style={{ color: '#3a5070' }}>Día bloqueado</p>
             </div>
           </div>
         </div>
@@ -279,9 +300,32 @@ export default function CalendarioPage() {
               {/* Contenido */}
               <div className="overflow-y-auto" style={{ maxHeight: '520px' }}>
 
-                {/* RESERVAS DEL DÍA */}
+                {/* BANNER DÍA BLOQUEADO */}
+                {blockedDays.includes(selectedDate) && (
+                  <div className="px-5 py-3 flex items-center gap-3" style={{ background: 'rgba(239,68,68,0.08)', borderBottom: '1px solid rgba(239,68,68,0.2)' }}>
+                    <span style={{ color: '#f87171', fontSize: '18px' }}>🚫</span>
+                    <p className="text-sm font-bold" style={{ color: '#f87171' }}>Día completo bloqueado</p>
+                  </div>
+                )}
+
+                {/* BANNER FRANJAS BLOQUEADAS */}
+                {!blockedDays.includes(selectedDate) && blockedSlots.filter(s => s.date === selectedDate).length > 0 && (
+                  <div style={{ borderBottom: '1px solid #1a2d45' }}>
+                    <div className="px-5 py-2" style={{ background: '#0a1220', borderBottom: '1px solid #1a2d45' }}>
+                      <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#f59e0b' }}>Franjas bloqueadas</p>
+                    </div>
+                    {blockedSlots.filter(s => s.date === selectedDate).map(slot => (
+                      <div key={slot.id} className="px-5 py-2.5 flex items-center gap-3" style={{ borderBottom: '1px solid #0f1c2e' }}>
+                        <p className="text-xs font-black font-mono w-20 flex-shrink-0" style={{ color: '#f59e0b' }}>{slot.start_time.substring(0,5)}–{slot.end_time.substring(0,5)}</p>
+                        <p className="text-xs" style={{ color: '#6b8ab0' }}>{slot.reason ?? 'Sin motivo'}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* RESERVAS CONFIRMADAS */}
                 {(() => {
-                  const dayBookings = bookingsForDate(selectedDate).sort((a, b) => a.start_time.localeCompare(b.start_time))
+                  const dayBookings = bookingsForDate(selectedDate, 'confirmed').sort((a, b) => a.start_time.localeCompare(b.start_time))
                   if (dayBookings.length === 0) return (
                     <div className="px-5 py-8 text-center" style={{ borderBottom: '1px solid #1a2d45' }}>
                       <p className="text-sm font-semibold" style={{ color: '#3a5070' }}>Sin reservas confirmadas</p>
@@ -326,8 +370,8 @@ export default function CalendarioPage() {
                   )
                 })()}
 
-                {/* SLOTS LIBRES */}
-                {(() => {
+                {/* SLOTS LIBRES (solo si el día no está bloqueado completo) */}
+                {!blockedDays.includes(selectedDate) && (() => {
                   const free = getFreeSlots(selectedDate)
                   const morning = free.filter(s => s.time < '14:00')
                   const afternoon = free.filter(s => s.time >= '14:00')
@@ -362,6 +406,36 @@ export default function CalendarioPage() {
                         </div>
                       )}
                     </>
+                  )
+                })()}
+
+                {/* CLASES CANCELADAS */}
+                {(() => {
+                  const cancelled = bookingsForDate(selectedDate, 'cancelled').sort((a, b) => a.start_time.localeCompare(b.start_time))
+                  if (cancelled.length === 0) return null
+                  return (
+                    <div>
+                      <div className="px-5 py-2" style={{ background: '#0a1220', borderBottom: '1px solid #1a2d45' }}>
+                        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#f87171' }}>Canceladas</p>
+                      </div>
+                      {cancelled.map(booking => {
+                        const type = booking.practice_type as PracticeType
+                        const subtype = (booking as any).practice_subtype as PracticeSubtype | null
+                        return (
+                          <div key={booking.id} className="px-5 py-3 flex items-center gap-3 opacity-60" style={{ borderBottom: '1px solid #0f1c2e' }}>
+                            <p className="text-xs font-black font-mono w-12 flex-shrink-0 line-through" style={{ color: '#6b8ab0' }}>{booking.start_time.substring(0, 5)}</p>
+                            <div className="w-px h-6 flex-shrink-0" style={{ background: '#1a2d45' }} />
+                            <div className="flex-1">
+                              <p className="text-white text-sm font-bold line-through">{(booking.student as any)?.full_name ?? '—'}</p>
+                              <p className="text-xs mt-0.5" style={{ color: '#3a5070' }}>{getPracticeLabel(type, subtype)}</p>
+                            </div>
+                            <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171' }}>
+                              Cancelada
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
                   )
                 })()}
 
