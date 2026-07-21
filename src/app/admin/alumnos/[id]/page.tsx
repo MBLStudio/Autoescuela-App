@@ -440,15 +440,17 @@ export default function AlumnoPerfilPage() {
             <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: '#0057B8' }}>Acceso alumno</p>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold" style={{ color: '#3a5070' }}>Código</span>
-                <span className="text-sm font-black font-mono text-white">{student.login_code ?? `Alumno-${student.order_number.toString().padStart(3, '0')}`}</span>
+                <span className="text-xs font-semibold" style={{ color: '#3a5070' }}>DNI</span>
+                <span className="text-sm font-black font-mono text-white">{student.dni}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold" style={{ color: '#3a5070' }}>PIN</span>
-                <span className="text-sm font-black font-mono text-white">{student.login_pin ?? student.order_number.toString().padStart(3, '0')}</span>
+                <span className="text-sm font-black font-mono text-white">
+                  {student.dni.replace(/\D/g, '').slice(-4)}
+                </span>
               </div>
             </div>
-            <p className="text-xs mt-3" style={{ color: '#3a5070' }}>El alumno entra en <span style={{ color: '#6b8ab0' }}>/alumno</span> con estas credenciales.</p>
+            <p className="text-xs mt-3" style={{ color: '#3a5070' }}>El alumno entra en <span style={{ color: '#6b8ab0' }}>/alumno</span> · PIN = últimos 4 dígitos del DNI.</p>
           </div>
 
           {/* Enlace alumno */}
