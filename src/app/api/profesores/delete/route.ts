@@ -20,6 +20,9 @@ export async function POST(req: NextRequest) {
   const { error: dbError } = await supabaseAdmin.from('instructors').delete().eq('id', id)
   if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 })
 
+  // Borrar también de staff (puede no existir si fue creado antes del fix)
+  await supabaseAdmin.from('staff').delete().eq('id', id)
+
   const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(id)
   if (authError) return NextResponse.json({ error: authError.message }, { status: 500 })
 

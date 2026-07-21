@@ -5,6 +5,15 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 
+const INSTRUCTOR_ROUTES = ['/admin', '/admin/calendario', '/admin/alumnos', '/admin/tablon', '/admin/examenes', '/admin/festivos', '/admin/cuadrante']
+const SECRETARY_ROUTES = ['/admin', '/admin/alumnos', '/admin/tablon', '/admin/pagos', '/admin/alertas']
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'Admin',
+  instructor: 'Instructor',
+  secretary: 'Secretaria',
+}
+
 const navItems = [
   {
     href: '/admin',
@@ -97,11 +106,11 @@ const navItems = [
     ),
   },
   {
-    href: '/admin/secretaria',
-    label: 'Secretaría',
+    href: '/admin/equipo',
+    label: 'Equipo',
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
       </svg>
     ),
   },
@@ -112,11 +121,17 @@ const SidebarContent = ({
   onNavigate,
   onLogout,
   tablonCount,
+  items,
+  userName,
+  userRole,
 }: {
   pathname: string
   onNavigate: () => void
   onLogout: () => void
   tablonCount: number
+  items: typeof navItems
+  userName: string | null
+  userRole: string | null
 }) => (
   <>
     {/* Logo */}
@@ -150,7 +165,7 @@ const SidebarContent = ({
 
     {/* Nav */}
     <nav className="flex-1 min-h-0 overflow-y-auto scroll-smooth px-3 py-4 space-y-1">
-      {navItems.map(item => {
+      {items.map(item => {
         const isActive = pathname === item.href
         return (
           <Link
@@ -183,8 +198,18 @@ const SidebarContent = ({
     {/* Info + Logout */}
     <div className="px-3 py-4" style={{ borderTop: '1px solid #1a2d45' }}>
       <div className="px-3 py-2 mb-2 rounded-xl" style={{ background: '#0f1c2e' }}>
-        <p className="text-xs font-medium text-white">Auto-Escuela Bahillo</p>
-        <p className="text-xs mt-0.5" style={{ color: '#3a5070' }}>Palencia</p>
+        {userName && (
+          <div className="flex items-center justify-between mb-0.5">
+            <p className="text-xs font-semibold text-white truncate">{userName}</p>
+            {userRole && (
+              <span className="text-xs px-1.5 py-0.5 rounded font-bold flex-shrink-0 ml-2"
+                style={{ background: '#0057B820', color: '#0057B8', fontSize: '10px' }}>
+                {ROLE_LABELS[userRole] ?? userRole}
+              </span>
+            )}
+          </div>
+        )}
+        <p className="text-xs" style={{ color: '#3a5070' }}>Auto-Escuela Bahillo</p>
       </div>
       <button
         onClick={onLogout}
@@ -214,6 +239,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const supabase = createClient()
   const [menuOpen, setMenuOpen] = useState(false)
   const [tablonCount, setTablonCount] = useState(0)
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [userName, setUserName] = useState<string | null>(null)
 
   useEffect(() => {
     supabase
@@ -222,7 +249,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       .is('instructor_id', null)
       .eq('is_active', true)
       .then(({ count }) => setTablonCount(count ?? 0))
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase
+        .from('staff')
+        .select('role, name')
+        .eq('id', user.id)
+        .single()
+        .then(({ data }) => {
+          setUserRole(data?.role ?? null)
+          setUserName(data?.name ?? null)
+        })
+    })
   }, [])
+
+  const filteredNavItems = userRole === 'admin'
+    ? navItems
+    : userRole === 'instructor'
+      ? navItems.filter(i => INSTRUCTOR_ROUTES.includes(i.href))
+      : userRole === 'secretary'
+        ? navItems.filter(i => SECRETARY_ROUTES.includes(i.href))
+        : []
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -236,7 +284,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* ── SIDEBAR — solo escritorio ── */}
       <aside className="hidden md:flex w-60 flex-col fixed h-full" style={{ background: '#0d1829', borderRight: '1px solid #1a2d45' }}>
-        <SidebarContent pathname={pathname} onNavigate={() => {}} onLogout={handleLogout} tablonCount={tablonCount} />
+        <SidebarContent pathname={pathname} onNavigate={() => {}} onLogout={handleLogout} tablonCount={tablonCount} items={filteredNavItems} userName={userName} userRole={userRole} />
       </aside>
 
       {/* ── TOPBAR — solo móvil ── */}
@@ -294,6 +342,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               onNavigate={() => setMenuOpen(false)}
               onLogout={handleLogout}
               tablonCount={tablonCount}
+              items={filteredNavItems}
+              userName={userName}
+              userRole={userRole}
             />
           </div>
         </>

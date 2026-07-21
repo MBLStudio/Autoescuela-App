@@ -85,6 +85,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Usuario creado pero error al guardar en BD: ' + dbError.message }, { status: 500 })
   }
 
+  // Añadir a staff para que pueda hacer login en el panel
+  const { error: staffError } = await supabaseAdmin.from('staff').insert({
+    id: authData.user.id,
+    email,
+    name,
+    role: 'instructor',
+    is_active: true,
+  })
+  if (staffError) {
+    console.error('Error añadiendo instructor a staff:', staffError)
+  }
+
   try {
     const resend = new Resend(process.env.RESEND_API_KEY)
     await resend.emails.send({

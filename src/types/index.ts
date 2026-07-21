@@ -20,6 +20,7 @@ export interface Instructor {
   milestone_counts: number[]
   break_minutes: number
   jornada: 'full' | 'half'
+  notes: string | null
   created_at: string
 }
 
@@ -51,6 +52,9 @@ export interface Student {
   alert_days_inactive: number
   exam_mode: boolean
   notes: string | null
+  preferred_schedule: string | null
+  preferred_days: number[] | null
+  start_date: string | null
   created_at: string
 }
 

@@ -35,6 +35,11 @@ export default function ProfesoresPage() {
   const [milestonesInput, setMilestonesInput] = useState('')
   const [savingMilestones, setSavingMilestones] = useState(false)
   const [milestonesError, setMilestonesError] = useState('')
+
+  // Editar notas
+  const [editingNotesId, setEditingNotesId] = useState<string | null>(null)
+  const [notesInput, setNotesInput] = useState('')
+  const [savingNotes, setSavingNotes] = useState(false)
   const [scheduleForm, setScheduleForm] = useState({
     jornada: 'full' as 'full' | 'half',
     schedule_morning: true, morning_start: '08:00', morning_end: '13:30',
@@ -125,6 +130,14 @@ export default function ProfesoresPage() {
     setInstructors(prev => prev.map(i => i.id === instructorId ? { ...i, milestone_counts: sorted } : i))
     setEditingMilestonesId(null)
     setSavingMilestones(false)
+  }
+
+  async function saveInstructorNotes(instructorId: string) {
+    setSavingNotes(true)
+    await supabase.from('instructors').update({ notes: notesInput.trim() || null }).eq('id', instructorId)
+    setInstructors(prev => prev.map(i => i.id === instructorId ? { ...i, notes: notesInput.trim() || null } : i))
+    setEditingNotesId(null)
+    setSavingNotes(false)
   }
 
   async function saveSchedule(instructorId: string) {
@@ -267,6 +280,7 @@ export default function ProfesoresPage() {
               const isEditing = editingScheduleId === inst.id
               const isEditingMilestones = editingMilestonesId === inst.id
               const isEditingTypes = editingTypesId === inst.id
+              const isEditingNotes = editingNotesId === inst.id
               return (
                 <div key={inst.id} className="px-5 py-4 space-y-3">
                   <div className="flex items-center gap-4">
@@ -305,9 +319,23 @@ export default function ProfesoresPage() {
                       </button>
                       <button
                         onClick={() => {
+                          setEditingNotesId(isEditingNotes ? null : inst.id)
+                          setEditingScheduleId(null)
+                          setEditingMilestonesId(null)
+                          setEditingTypesId(null)
+                          setNotesInput(inst.notes ?? '')
+                        }}
+                        className="text-xs px-2.5 py-1 rounded-lg font-semibold transition"
+                        style={{ color: isEditingNotes ? '#a78bfa' : '#6b8ab0', background: isEditingNotes ? 'rgba(167,139,250,0.1)' : '#0a1220', border: `1px solid ${isEditingNotes ? 'rgba(167,139,250,0.3)' : '#1a2d45'}` }}
+                      >
+                        {isEditingNotes ? 'Cancelar' : '📝 Notas'}
+                      </button>
+                      <button
+                        onClick={() => {
                           setEditingScheduleId(isEditing ? null : inst.id)
                           setEditingMilestonesId(null)
                           setEditingTypesId(null)
+                          setEditingNotesId(null)
                           setScheduleForm({
                             jornada: inst.jornada ?? 'full',
                             schedule_morning: inst.schedule_morning ?? true,
@@ -360,14 +388,44 @@ export default function ProfesoresPage() {
                   </div>
 
                   {/* Resumen horario + hitos + tipos */}
-                  {!isEditing && !isEditingMilestones && !isEditingTypes && (
-                    <div className="flex flex-wrap gap-3 text-xs" style={{ color: '#3a5070' }}>
-                      <span>{inst.jornada === 'half' ? '🕓 Media jornada' : '🕗 Jornada completa'}</span>
-                      {(inst.schedule_morning ?? true) && <span>☀️ {(inst.morning_start ?? '08:00').substring(0,5)} – {(inst.morning_end ?? '13:30').substring(0,5)}</span>}
-                      {(inst.schedule_afternoon ?? true) && <span>🌆 {(inst.afternoon_start ?? '16:00').substring(0,5)} – {(inst.afternoon_end ?? '19:15').substring(0,5)}</span>}
-                      <span>⏱ Descanso: {inst.break_minutes ?? 10} min</span>
-                      <span>🎯 Hitos: {(inst.milestone_counts ?? [5, 10, 15, 20]).join(', ')}</span>
-                      <span>🚗 Tipos: {(inst.practice_types ?? ['car']).join(', ')}</span>
+                  {!isEditing && !isEditingMilestones && !isEditingTypes && !isEditingNotes && (
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-3 text-xs" style={{ color: '#3a5070' }}>
+                        <span>{inst.jornada === 'half' ? '🕓 Media jornada' : '🕗 Jornada completa'}</span>
+                        {(inst.schedule_morning ?? true) && <span>☀️ {(inst.morning_start ?? '08:00').substring(0,5)} – {(inst.morning_end ?? '13:30').substring(0,5)}</span>}
+                        {(inst.schedule_afternoon ?? true) && <span>🌆 {(inst.afternoon_start ?? '16:00').substring(0,5)} – {(inst.afternoon_end ?? '19:15').substring(0,5)}</span>}
+                        <span>⏱ Descanso: {inst.break_minutes ?? 10} min</span>
+                        <span>🎯 Hitos: {(inst.milestone_counts ?? [5, 10, 15, 20]).join(', ')}</span>
+                        <span>🚗 Tipos: {(inst.practice_types ?? ['car']).join(', ')}</span>
+                      </div>
+                      {inst.notes && (
+                        <p className="text-xs leading-relaxed" style={{ color: '#6b8ab0', borderLeft: '2px solid #1a2d45', paddingLeft: '10px' }}>
+                          {inst.notes}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Formulario notas */}
+                  {isEditingNotes && (
+                    <div className="rounded-xl p-4 space-y-3" style={{ background: '#0a1220', border: '1px solid #1a2d45' }}>
+                      <p className="text-xs font-semibold" style={{ color: '#6b8ab0' }}>Notas internas del instructor</p>
+                      <textarea
+                        value={notesInput}
+                        onChange={e => setNotesInput(e.target.value)}
+                        placeholder="Solo da camión los viernes, prefiere que le avisen con antelación..."
+                        rows={4}
+                        className="w-full rounded-xl px-3 py-2.5 text-white text-sm outline-none resize-none"
+                        style={{ background: '#0d1829', border: '1px solid #1a2d45' }}
+                      />
+                      <button
+                        onClick={() => saveInstructorNotes(inst.id)}
+                        disabled={savingNotes}
+                        className="w-full py-2.5 rounded-xl text-sm font-bold text-white transition"
+                        style={{ background: savingNotes ? '#1a2d45' : '#0057B8' }}
+                      >
+                        {savingNotes ? 'Guardando...' : 'Guardar notas'}
+                      </button>
                     </div>
                   )}
 

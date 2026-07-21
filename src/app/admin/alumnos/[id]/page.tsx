@@ -29,6 +29,12 @@ export default function AlumnoPerfilPage() {
   const [maxWeekly, setMaxWeekly] = useState(5)
   const [maxDaily, setMaxDaily] = useState(1)
   const [savingLimits, setSavingLimits] = useState(false)
+  const [notes, setNotes] = useState('')
+  const [editNotes, setEditNotes] = useState(false)
+  const [savingNotes, setSavingNotes] = useState(false)
+  const [startDate, setStartDate] = useState('')
+  const [editStartDate, setEditStartDate] = useState(false)
+  const [savingStartDate, setSavingStartDate] = useState(false)
 
   useEffect(() => { fetchData() }, [id])
 
@@ -45,6 +51,8 @@ export default function AlumnoPerfilPage() {
     setEmail(studentData.email ?? '')
     setMaxWeekly(studentData.max_weekly_bookings ?? 5)
     setMaxDaily(studentData.max_daily_bookings ?? 1)
+    setNotes(studentData.notes ?? '')
+    setStartDate(studentData.start_date ?? '')
     if (bookingsData) setBookings(bookingsData)
     setLoading(false)
   }
@@ -102,6 +110,35 @@ export default function AlumnoPerfilPage() {
     setStudent(prev => prev ? { ...prev, email: email.trim() || null } : prev)
     setSavingEmail(false)
     setEditEmail(false)
+  }
+
+  async function saveNotes() {
+    setSavingNotes(true)
+    await supabase.from('students').update({ notes: notes.trim() || null }).eq('id', id)
+    setStudent(prev => prev ? { ...prev, notes: notes.trim() || null } : prev)
+    setSavingNotes(false)
+    setEditNotes(false)
+  }
+
+  async function saveStartDate() {
+    setSavingStartDate(true)
+    await supabase.from('students').update({ start_date: startDate || null }).eq('id', id)
+    setStudent(prev => prev ? { ...prev, start_date: startDate || null } : prev)
+    setSavingStartDate(false)
+    setEditStartDate(false)
+  }
+
+  async function savePreferredSchedule(value: string) {
+    const newVal = student?.preferred_schedule === value ? null : value
+    await supabase.from('students').update({ preferred_schedule: newVal }).eq('id', id)
+    setStudent(prev => prev ? { ...prev, preferred_schedule: newVal } : prev)
+  }
+
+  async function togglePreferredDay(day: number) {
+    const current = student?.preferred_days ?? []
+    const newDays = current.includes(day) ? current.filter(d => d !== day) : [...current, day].sort((a, b) => a - b)
+    await supabase.from('students').update({ preferred_days: newDays }).eq('id', id)
+    setStudent(prev => prev ? { ...prev, preferred_days: newDays } : prev)
   }
 
   async function toggleActive() {
@@ -433,6 +470,145 @@ export default function AlumnoPerfilPage() {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Preferencias y notas */}
+          <div className="rounded-2xl p-5 space-y-5" style={{ background: '#0d1829', border: '1px solid #1a2d45' }}>
+            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#0057B8' }}>Preferencias y notas</p>
+
+            {/* Horario preferido */}
+            <div>
+              <p className="text-xs font-semibold mb-2" style={{ color: '#3a5070' }}>Horario preferido</p>
+              <div className="flex gap-2">
+                {([
+                  { value: 'morning', label: 'Mañanas' },
+                  { value: 'afternoon', label: 'Tardes' },
+                  { value: 'any', label: 'Indiferente' },
+                ] as const).map(({ value, label }) => {
+                  const active = student.preferred_schedule === value
+                  return (
+                    <button
+                      key={value}
+                      onClick={() => savePreferredSchedule(value)}
+                      className="flex-1 py-2 rounded-xl text-xs font-bold transition"
+                      style={{
+                        background: active ? '#0057B820' : '#0a1220',
+                        border: `1.5px solid ${active ? '#0057B8' : '#1a2d45'}`,
+                        color: active ? '#0057B8' : '#3a5070',
+                      }}
+                    >
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Días preferidos */}
+            <div>
+              <p className="text-xs font-semibold mb-2" style={{ color: '#3a5070' }}>Días preferidos</p>
+              <div className="flex gap-1.5">
+                {['L', 'M', 'X', 'J', 'V', 'S'].map((day, idx) => {
+                  const active = (student.preferred_days ?? []).includes(idx)
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => togglePreferredDay(idx)}
+                      className="w-9 h-9 rounded-xl text-xs font-black transition flex items-center justify-center"
+                      style={{
+                        background: active ? '#0057B820' : '#0a1220',
+                        border: `1.5px solid ${active ? '#0057B8' : '#1a2d45'}`,
+                        color: active ? '#0057B8' : '#3a5070',
+                      }}
+                    >
+                      {day}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Fecha de inicio */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-xs font-semibold" style={{ color: '#3a5070' }}>Inicio de prácticas</p>
+                {!editStartDate && (
+                  <button
+                    onClick={() => setEditStartDate(true)}
+                    className="text-xs font-semibold transition"
+                    style={{ color: '#3a5070' }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = 'white'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#3a5070'}
+                  >
+                    Editar
+                  </button>
+                )}
+              </div>
+              {editStartDate ? (
+                <div className="space-y-2">
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={e => setStartDate(e.target.value)}
+                    className="w-full rounded-xl px-3 py-2.5 text-white text-sm outline-none"
+                    style={{ background: '#0a1220', border: '1.5px solid #0057B8', colorScheme: 'dark' }}
+                  />
+                  <div className="flex gap-2">
+                    <button onClick={() => setEditStartDate(false)} className="flex-1 py-2 rounded-lg text-xs font-bold"
+                      style={{ background: '#0a1220', color: '#6b8ab0', border: '1px solid #1a2d45' }}>Cancelar</button>
+                    <button onClick={saveStartDate} disabled={savingStartDate} className="flex-1 py-2 rounded-lg text-xs font-bold text-white"
+                      style={{ background: '#0057B8' }}>{savingStartDate ? 'Guardando...' : 'Guardar'}</button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm font-bold" style={{ color: student.start_date ? 'white' : '#3a5070' }}>
+                  {student.start_date ? formatDate(student.start_date) : 'No especificada'}
+                </p>
+              )}
+            </div>
+
+            {/* Notas */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-xs font-semibold" style={{ color: '#3a5070' }}>Notas internas</p>
+                {!editNotes && (
+                  <button
+                    onClick={() => { setEditNotes(true); setNotes(student.notes ?? '') }}
+                    className="text-xs font-semibold transition"
+                    style={{ color: '#3a5070' }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = 'white'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#3a5070'}
+                  >
+                    Editar
+                  </button>
+                )}
+              </div>
+              {editNotes ? (
+                <div className="space-y-2">
+                  <textarea
+                    value={notes}
+                    onChange={e => setNotes(e.target.value)}
+                    placeholder="Alumno nervioso, prefiere las mañanas del miércoles, empieza con coche..."
+                    rows={4}
+                    className="w-full rounded-xl px-3 py-2.5 text-white text-sm outline-none resize-none"
+                    style={{ background: '#0a1220', border: '1.5px solid #0057B8' }}
+                  />
+                  <div className="flex gap-2">
+                    <button onClick={() => setEditNotes(false)} className="flex-1 py-2 rounded-lg text-xs font-bold"
+                      style={{ background: '#0a1220', color: '#6b8ab0', border: '1px solid #1a2d45' }}>Cancelar</button>
+                    <button onClick={saveNotes} disabled={savingNotes} className="flex-1 py-2 rounded-lg text-xs font-bold text-white"
+                      style={{ background: '#0057B8' }}>{savingNotes ? 'Guardando...' : 'Guardar'}</button>
+                  </div>
+                </div>
+              ) : (
+                <p
+                  className="text-sm leading-relaxed"
+                  style={{ color: student.notes ? '#a0b8d0' : '#3a5070', fontStyle: student.notes ? 'normal' : 'italic' }}
+                >
+                  {student.notes ?? 'Sin notas'}
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Credenciales de acceso */}
