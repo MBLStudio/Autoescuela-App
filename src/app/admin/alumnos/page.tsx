@@ -16,16 +16,19 @@ export default function AlumnosPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [copied, setCopied] = useState<string | null>(null)
+  const [showInactive, setShowInactive] = useState(false)
+  const [deleting, setDeleting] = useState<string | null>(null)
 
-  useEffect(() => { fetchStudents() }, [])
+  useEffect(() => { fetchStudents() }, [showInactive])
 
   async function fetchStudents() {
     setLoading(true)
-    const { data } = await supabase
+    const query = supabase
       .from('students')
       .select('*, instructor:instructors(name)')
-      .eq('is_active', true)
+      .eq('is_active', !showInactive)
       .order('order_number', { ascending: true })
+    const { data } = await query
     if (data) setStudents(data as StudentWithInstructor[])
     setLoading(false)
   }
@@ -38,15 +41,40 @@ export default function AlumnosPage() {
   }
 
   async function deactivateStudent(id: string) {
-    if (!confirm('¿Desactivar este alumno?')) return
+    if (!confirm('¿Desactivar este alumno? Podrás reactivarlo desde su perfil.')) return
     await supabase.from('students').update({ is_active: false }).eq('id', id)
     fetchStudents()
+  }
+
+  async function activateStudent(id: string) {
+    await supabase.from('students').update({ is_active: true }).eq('id', id)
+    fetchStudents()
+  }
+
+  async function deleteStudent(id: string, name: string) {
+    if (!confirm(`¿Borrar definitivamente a ${name}? Se eliminarán también todas sus prácticas. Esta acción no se puede deshacer.`)) return
+    setDeleting(id)
+    const res = await fetch('/api/alumnos/delete', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentId: id }),
+    })
+    if (res.ok) {
+      fetchStudents()
+    } else {
+      const data = await res.json()
+      alert(data.error ?? 'Error al borrar')
+    }
+    setDeleting(null)
   }
 
   const filtered = students.filter(s =>
     s.full_name.toLowerCase().includes(search.toLowerCase()) ||
     s.dni.toLowerCase().includes(search.toLowerCase())
   )
+
+  const activeCount = !showInactive ? students.length : null
+  const inactiveCount = showInactive ? students.length : null
 
   return (
     <div className="px-4 py-6 md:p-8">
@@ -56,7 +84,9 @@ export default function AlumnosPage() {
         <div>
           <p className="text-sm font-medium mb-1" style={{ color: '#0057B8' }}>Gestión</p>
           <h1 className="text-3xl font-black text-white tracking-tight">Alumnos</h1>
-          <p className="text-sm mt-1" style={{ color: '#6b8ab0' }}>{students.length} alumnos activos</p>
+          <p className="text-sm mt-1" style={{ color: '#6b8ab0' }}>
+            {showInactive ? `${students.length} alumnos inactivos` : `${students.length} alumnos activos`}
+          </p>
         </div>
         <Link
           href="/admin/alumnos/nuevo"
@@ -72,21 +102,46 @@ export default function AlumnosPage() {
         </Link>
       </div>
 
-      {/* Buscador */}
-      <div className="relative mb-6">
-        <svg className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: '#3a5070' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 111 11a6 6 0 0116 0z" />
-        </svg>
-        <input
-          type="text"
-          placeholder="Buscar por nombre o DNI..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="w-full rounded-xl pl-11 pr-4 py-3 text-white text-sm outline-none transition-all duration-200"
-          style={{ background: '#0d1829', border: '1.5px solid #1a2d45' }}
-          onFocus={e => e.target.style.borderColor = '#0057B8'}
-          onBlur={e => e.target.style.borderColor = '#1a2d45'}
-        />
+      {/* Filtro activos / inactivos + buscador */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <div className="flex rounded-xl overflow-hidden border" style={{ borderColor: '#1a2d45' }}>
+          <button
+            onClick={() => setShowInactive(false)}
+            className="px-4 py-2.5 text-sm font-bold transition-all"
+            style={{
+              background: !showInactive ? '#0057B8' : '#0d1829',
+              color: !showInactive ? 'white' : '#6b8ab0',
+            }}
+          >
+            Activos
+          </button>
+          <button
+            onClick={() => setShowInactive(true)}
+            className="px-4 py-2.5 text-sm font-bold transition-all"
+            style={{
+              background: showInactive ? 'rgba(239,68,68,0.15)' : '#0d1829',
+              color: showInactive ? '#f87171' : '#6b8ab0',
+            }}
+          >
+            Inactivos
+          </button>
+        </div>
+
+        <div className="relative flex-1">
+          <svg className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: '#3a5070' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 111 11a6 6 0 0116 0z" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Buscar por nombre o DNI..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full rounded-xl pl-11 pr-4 py-3 text-white text-sm outline-none transition-all duration-200"
+            style={{ background: '#0d1829', border: '1.5px solid #1a2d45' }}
+            onFocus={e => e.target.style.borderColor = '#0057B8'}
+            onBlur={e => e.target.style.borderColor = '#1a2d45'}
+          />
+        </div>
       </div>
 
       {/* Lista */}
@@ -97,15 +152,19 @@ export default function AlumnosPage() {
           <svg className="w-12 h-12 mx-auto mb-4" style={{ color: '#1a2d45' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          <p className="font-semibold text-white">No hay alumnos</p>
-          <p className="text-sm mt-1" style={{ color: '#6b8ab0' }}>Crea el primer alumno para empezar</p>
+          <p className="font-semibold text-white">
+            {showInactive ? 'No hay alumnos inactivos' : 'No hay alumnos'}
+          </p>
+          <p className="text-sm mt-1" style={{ color: '#6b8ab0' }}>
+            {showInactive ? 'Todos los alumnos están activos' : 'Crea el primer alumno para empezar'}
+          </p>
         </div>
       ) : (
         <>
           {/* Vista móvil — tarjetas */}
           <div className="md:hidden space-y-3">
             {filtered.map(student => (
-              <div key={student.id} className="rounded-2xl p-4" style={{ background: '#0d1829', border: '1px solid #1a2d45' }}>
+              <div key={student.id} className="rounded-2xl p-4" style={{ background: '#0d1829', border: '1px solid #1a2d45', opacity: showInactive ? 0.8 : 1 }}>
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="text-xs font-black font-mono px-2 py-1 rounded-lg flex-shrink-0" style={{ background: '#0057B820', color: '#0057B8' }}>
@@ -146,11 +205,34 @@ export default function AlumnosPage() {
                     style={{ background: '#0f1c2e', color: '#a0b8d0' }}>
                     Ver perfil
                   </Link>
-                  <button onClick={() => copyLink(student.token)}
-                    className="flex-1 text-xs py-2 rounded-lg font-semibold"
-                    style={{ background: '#0057B820', color: '#0057B8' }}>
-                    {copied === student.token ? '✓ Copiado' : '🔗 Enlace'}
-                  </button>
+                  {showInactive ? (
+                    <>
+                      <button onClick={() => activateStudent(student.id)}
+                        className="flex-1 text-xs py-2 rounded-lg font-semibold"
+                        style={{ background: 'rgba(52,211,153,0.1)', color: '#34d399' }}>
+                        Reactivar
+                      </button>
+                      <button onClick={() => deleteStudent(student.id, student.full_name)}
+                        disabled={deleting === student.id}
+                        className="flex-1 text-xs py-2 rounded-lg font-semibold"
+                        style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171' }}>
+                        {deleting === student.id ? '...' : 'Borrar'}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={() => copyLink(student.token)}
+                        className="flex-1 text-xs py-2 rounded-lg font-semibold"
+                        style={{ background: '#0057B820', color: '#0057B8' }}>
+                        {copied === student.token ? '✓ Copiado' : '🔗 Enlace'}
+                      </button>
+                      <button onClick={() => deactivateStudent(student.id)}
+                        className="flex-1 text-xs py-2 rounded-lg font-semibold"
+                        style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171' }}>
+                        Desactivar
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}
@@ -169,7 +251,7 @@ export default function AlumnosPage() {
               <tbody>
                 {filtered.map((student, idx) => (
                   <tr key={student.id}
-                    style={{ borderBottom: idx < filtered.length - 1 ? '1px solid #0f1c2e' : 'none' }}
+                    style={{ borderBottom: idx < filtered.length - 1 ? '1px solid #0f1c2e' : 'none', opacity: showInactive ? 0.8 : 1 }}
                     onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#0f1c2e'}
                     onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
                   >
@@ -222,20 +304,38 @@ export default function AlumnosPage() {
                           onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#0f1c2e'}>
                           Ver perfil
                         </Link>
-                        <button onClick={() => copyLink(student.token)}
-                          className="text-xs px-3 py-1.5 rounded-lg font-semibold transition-all duration-150"
-                          style={{ background: '#0057B820', color: '#0057B8' }}
-                          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#0057B840'}
-                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#0057B820'}>
-                          {copied === student.token ? '✓ Copiado' : '🔗 Enlace'}
-                        </button>
-                        <button onClick={() => deactivateStudent(student.id)}
-                          className="text-xs px-3 py-1.5 rounded-lg font-semibold transition-all duration-150"
-                          style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171' }}
-                          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.2)'}
-                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.1)'}>
-                          Desactivar
-                        </button>
+                        {showInactive ? (
+                          <>
+                            <button onClick={() => activateStudent(student.id)}
+                              className="text-xs px-3 py-1.5 rounded-lg font-semibold transition-all duration-150"
+                              style={{ background: 'rgba(52,211,153,0.1)', color: '#34d399' }}>
+                              Reactivar
+                            </button>
+                            <button onClick={() => deleteStudent(student.id, student.full_name)}
+                              disabled={deleting === student.id}
+                              className="text-xs px-3 py-1.5 rounded-lg font-semibold transition-all duration-150"
+                              style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171' }}>
+                              {deleting === student.id ? '...' : 'Borrar'}
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button onClick={() => copyLink(student.token)}
+                              className="text-xs px-3 py-1.5 rounded-lg font-semibold transition-all duration-150"
+                              style={{ background: '#0057B820', color: '#0057B8' }}
+                              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#0057B840'}
+                              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#0057B820'}>
+                              {copied === student.token ? '✓ Copiado' : '🔗 Enlace'}
+                            </button>
+                            <button onClick={() => deactivateStudent(student.id)}
+                              className="text-xs px-3 py-1.5 rounded-lg font-semibold transition-all duration-150"
+                              style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171' }}
+                              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.2)'}
+                              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.1)'}>
+                              Desactivar
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
