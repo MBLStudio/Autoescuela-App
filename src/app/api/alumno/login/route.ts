@@ -45,12 +45,14 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // Buscar alumno por DNI
+  // Buscar alumno por DNI (activo primero, por si hay duplicados de prueba)
   const { data: student, error: studentError } = await supabaseAdmin
     .from('students')
     .select('token, is_active, dni')
     .ilike('dni', cleanDni)
-    .single()
+    .eq('is_active', true)
+    .limit(1)
+    .maybeSingle()
 
   console.log('[login] cleanDni:', cleanDni, '| cleanPin:', cleanPin)
   console.log('[login] studentError:', studentError?.message ?? null)

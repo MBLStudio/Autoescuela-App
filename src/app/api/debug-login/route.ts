@@ -13,24 +13,22 @@ export async function GET(req: NextRequest) {
 
   const cleanDni = dni.trim().toUpperCase()
 
-  const { data: student, error } = await supabaseAdmin
+  const { data: students, error } = await supabaseAdmin
     .from('students')
-    .select('id, dni, is_active, full_name')
+    .select('id, dni, is_active, full_name, created_at')
     .ilike('dni', cleanDni)
-    .single()
-
-  const storedDni = student?.dni ?? null
-  const numericPart = storedDni ? storedDni.replace(/\D/g, '') : null
-  const expectedPin = numericPart ? numericPart.slice(-4) : null
 
   return NextResponse.json({
     searched: cleanDni,
-    found: !!student,
+    count: students?.length ?? 0,
     error: error?.message ?? null,
-    storedDni,
-    numericPart,
-    expectedPin,
-    isActive: student?.is_active ?? null,
-    name: student?.full_name ?? null,
+    students: students?.map(s => ({
+      id: s.id,
+      name: s.full_name,
+      dni: s.dni,
+      isActive: s.is_active,
+      createdAt: s.created_at,
+      expectedPin: s.dni.replace(/\D/g, '').slice(-4),
+    })) ?? [],
   })
 }
