@@ -63,6 +63,7 @@ export default function StudentPage() {
   const [myBookings, setMyBookings] = useState<Booking[]>([])
   const [takenSlots, setTakenSlots] = useState<{ date: string; start: string; type: PracticeType; subtype: PracticeSubtype | null }[]>([])
   const [blockedSlots, setBlockedSlots] = useState<{ date: string; start: string; end: string }[]>([])
+  const [blockedDays, setBlockedDays] = useState<{ date: string; reason: string | null }[]>([])
 
   const [allBookings, setAllBookings] = useState<Booking[]>([])
   const [exams, setExams] = useState<Exam[]>([])
@@ -105,6 +106,7 @@ export default function StudentPage() {
       ...(data.instructor_id ? [
         fetchTakenSlots(data.instructor_id),
         fetchBlockedSlots(data.instructor_id),
+        fetchBlockedDays(data.instructor_id),
         fetchInstructor(data.instructor_id),
       ] : []),
     ])
@@ -182,6 +184,18 @@ export default function StudentPage() {
         end: b.end_time.substring(0, 5),
       })))
     }
+  }
+
+  async function fetchBlockedDays(instructorId: string) {
+    const from = toDateString(workingDays[0])
+    const to = toDateString(workingDays[workingDays.length - 1])
+    const { data } = await supabase
+      .from('blocked_days')
+      .select('date, reason')
+      .eq('instructor_id', instructorId)
+      .gte('date', from)
+      .lte('date', to)
+    if (data) setBlockedDays(data.map(b => ({ date: b.date, reason: b.reason })))
   }
 
   function toMins(t: string): number {
@@ -882,6 +896,7 @@ export default function StudentPage() {
               <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
                 {workingDays.map(day => {
                   const dateStr = toDateString(day)
+                  const blockedDay = blockedDays.find(b => b.date === dateStr)
                   const slots = getSlotsForDay(dateStr, selectedType, selectedSubtype)
                   const available = slots.filter(s => !s.taken).length
                   const isSelected = dateStr === selectedDate
@@ -892,6 +907,31 @@ export default function StudentPage() {
                   const maxDaily = student?.exam_mode ? 2 : 1
                   const weekFull = weekCount >= maxWeekly
                   const dayFull = dayCount >= maxDaily
+
+                  if (blockedDay) {
+                    return (
+                      <div
+                        key={dateStr}
+                        className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm"
+                        style={{
+                          background: 'rgba(239,68,68,0.05)',
+                          border: '1.5px solid rgba(239,68,68,0.2)',
+                          opacity: 0.7,
+                        }}
+                      >
+                        <div className="text-left">
+                          <p className="font-bold" style={{ color: '#f87171' }}>{getDayName(dateStr)}</p>
+                          <p className="text-xs mt-0.5" style={{ color: '#3a5070' }}>{formatDate(dateStr)}</p>
+                        </div>
+                        <span
+                          className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                          style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171' }}
+                        >
+                          🚫 {blockedDay.reason ?? 'No disponible'}
+                        </span>
+                      </div>
+                    )
+                  }
 
                   return (
                     <button

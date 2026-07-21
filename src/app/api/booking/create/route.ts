@@ -33,6 +33,19 @@ export async function POST(req: NextRequest) {
 
   const today = new Date().toISOString().split('T')[0]
 
+  // Comprobar que el día no está bloqueado
+  const { data: blockedDay } = await supabaseAdmin
+    .from('blocked_days')
+    .select('id')
+    .eq('instructor_id', student.instructor_id)
+    .eq('date', practiceDate)
+    .limit(1)
+    .maybeSingle()
+
+  if (blockedDay) {
+    return NextResponse.json({ error: 'Este día está bloqueado. El instructor no está disponible.' }, { status: 409 })
+  }
+
   // Comprobar límite de reservas activas simultáneas
   if (student.max_concurrent_bookings) {
     const { count } = await supabaseAdmin
