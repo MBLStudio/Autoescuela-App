@@ -46,15 +46,21 @@ export async function POST(req: NextRequest) {
   }
 
   // Buscar alumno por DNI
-  const { data: student } = await supabaseAdmin
+  const { data: student, error: studentError } = await supabaseAdmin
     .from('students')
     .select('token, is_active, dni')
     .ilike('dni', cleanDni)
     .single()
 
+  console.log('[login] cleanDni:', cleanDni, '| cleanPin:', cleanPin)
+  console.log('[login] studentError:', studentError?.message ?? null)
+  console.log('[login] student found:', !!student, '| stored dni:', student?.dni ?? null)
+
   // Validar PIN = últimos 4 dígitos numéricos del DNI
   const validPin = student ? getPinFromDni(student.dni) : null
   const pinOk = validPin !== null && validPin.length === 4 && cleanPin === validPin
+
+  console.log('[login] validPin:', validPin, '| pinOk:', pinOk)
 
   if (!student || !pinOk) {
     await supabaseAdmin.from('login_attempts').insert({ ip_address: ip })
