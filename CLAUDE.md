@@ -1,3 +1,36 @@
+# MBL Autoescuela — Contexto de Proyecto
+
+## Objetivo
+
+Sistema SaaS para gestión de autoescuelas.
+
+## Filosofía
+
+La interfaz debe ser extremadamente simple.
+Los profesores no son usuarios técnicos.
+Los alumnos deben poder reservar prácticas en menos de 30 segundos.
+
+## Entidades principales
+
+- Alumnos
+- Profesores
+- Vehículos
+- Prácticas
+- Reservas
+
+## Prioridades
+
+1. Reserva de prácticas
+2. Gestión de disponibilidad
+3. Comunicación alumno-profesor
+4. Estadísticas
+
+## Reglas
+
+Siempre proponer soluciones escalables.
+Evitar complejidad innecesaria.
+Pensar siempre en multi-autoescuela.
+
 <!-- gentle-ai:engram-protocol -->
 ## Engram Persistent Memory
 
