@@ -42,3 +42,6 @@ next-env.d.ts
 
 .vercel
 .env*.local
+
+# claude code local overrides (may contain personal permission history)
+.claude/settings.local.json
