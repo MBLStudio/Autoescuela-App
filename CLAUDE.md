@@ -2,34 +2,38 @@
 
 ## Objetivo
 
-Sistema SaaS para gestión de autoescuelas.
+SaaS de gestión para autoescuelas: reservas de prácticas, gestión de alumnos/profesores, comunicación por turnos y seguimiento hacia el examen.
 
 ## Filosofía
 
-La interfaz debe ser extremadamente simple.
-Los profesores no son usuarios técnicos.
-Los alumnos deben poder reservar prácticas en menos de 30 segundos.
+Interfaz extremadamente simple — los profesores no son usuarios técnicos y un alumno debe poder reservar una práctica en menos de 30 segundos desde el móvil. Ante la duda entre "más completo" y "más claro", gana claro. Cualquier cambio de UI se valida con: ¿lo entendería un profesor sin que nadie se lo explique?
 
-## Entidades principales
+## Entidades principales (reales, no genéricas)
 
-- Alumnos
-- Profesores
-- Vehículos
-- Prácticas
-- Reservas
+- **Alumnos** (`students`): login por DNI+PIN (no Supabase Auth), `practice_types` (car/moto), `max_weekly_bookings`
+- **Staff** (`staff`): roles `admin` / `instructor` / `secretary`, cada uno con permisos distintos vía `lib/auth.ts`
+- **Reservas** (`bookings`): fecha, hora, tipo de práctica, `pickup_location`, estado `confirmed`/`completed`/`cancelled`
+- **Tablón**: turnos que un alumno puede reclamar (`tablon/claim`) o el centro publicar (`tablon/add`) — el mecanismo real de "comunicación alumno-profesor"
+
+## Funcionalidades críticas
+
+- Reserva y cancelación de prácticas sin solapes de horario/vehículo
+- Notificaciones automáticas: instructor, alumno, hito alcanzado, franja liberada (`notify-*` routes + cron)
+- Resumen diario (`cron/daily-summary`) y recordatorios (`cron/reminders`) sin intervención manual
+- Alta/baja de profesores y secretarias por invitación, no por acceso directo a la base de datos
 
 ## Prioridades
 
-1. Reserva de prácticas
-2. Gestión de disponibilidad
-3. Comunicación alumno-profesor
-4. Estadísticas
+1. Reserva y disponibilidad sin fricción — es la razón de ser del producto
+2. Comunicación alumno↔profesor (tablón, notificaciones)
+3. Seguimiento de progreso hacia el examen
+4. Estadísticas para la autoescuela
 
 ## Reglas
 
-Siempre proponer soluciones escalables.
-Evitar complejidad innecesaria.
-Pensar siempre en multi-autoescuela.
+- Multi-autoescuela desde el diseño de datos — nunca asumas una única instancia, aunque hoy solo haya un cliente real.
+- No sacrifiques el flujo de reserva (función #1) por pulido visual en otras pantallas.
+- Antes de tocar `bookings` o `tablon`, comprueba que no se puedan crear reservas duplicadas o en franjas ya bloqueadas — es el bug más caro posible aquí.
 
 <!-- gentle-ai:engram-protocol -->
 ## Engram Persistent Memory
