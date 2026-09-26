@@ -1,21 +1,3 @@
 {
-  "regions": ["dub1"],
-  "crons": [
-    {
-      "path": "/api/cron/keepwarm",
-      "schedule": "0 6 * * *"
-    },
-    {
-      "path": "/api/cron/daily-summary",
-      "schedule": "0 5 * * *"
-    },
-    {
-      "path": "/api/cron/reminders",
-      "schedule": "0 8 * * *"
-    },
-    {
-      "path": "/api/cron/auto-complete",
-      "schedule": "0 20 * * *"
-    }
-  ]
+  "regions": ["dub1"]
 }
