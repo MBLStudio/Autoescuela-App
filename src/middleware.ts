@@ -1,62 +1,57 @@
-import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// ── Mudanza a ControlL ───────────────────────────────────────────────────────
+// Autoescuela Bahillo se ha mudado a ControlL (https://app.controll.es) con los
+// mismos ids y el mismo token de enlace personal de cada alumno. Esta app ya no
+// sirve páginas ni acepta escrituras; todo se corta aquí, antes de cualquier lógica:
+//   · /api/...          → 410 JSON (incluidos los crons)
+//   · /s/<token>?...    → https://app.controll.es/s/<token>?...  (query intacta)
+//   · /alumno/...       → https://app.controll.es/alumno
+//   · cualquier otra    → https://app.controll.es/
+// Los estáticos (/_next, favicon, manifest, imágenes) quedan fuera del matcher y
+// se sirven normal.
+//
+// Antes este middleware refrescaba la sesión de Supabase y protegía /admin e
+// /instructor. Ya no hace falta: ninguna página ni ruta de API llega a ejecutarse.
+
 export const runtime = 'nodejs'
-export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
+
+const CONTROLL_URL = 'https://app.controll.es'
+const MENSAJE_MUDANZA = 'Esta aplicación se ha mudado a app.controll.es'
+
+// Redirección permanente (308), pero con caché acotada en el navegador: sin
+// Cache-Control, el navegador guarda un 308 indefinidamente y, si hubiera que
+// deshacer la mudanza, quien ya pasó por aquí seguiría saltando a ControlL.
+function redirigir(url: string) {
+  return NextResponse.redirect(url, {
+    status: 308,
+    headers: { 'Cache-Control': 'private, max-age=3600' },
   })
+}
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          )
-          supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
+export function middleware(request: NextRequest) {
+  const { pathname, search } = request.nextUrl
 
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser()
-
-  const path = request.nextUrl.pathname
-  if (path.startsWith('/auth/')) return supabaseResponse
-
-  const protectedPaths = ['/admin', '/instructor']
-  const isProtected = protectedPaths.some(p => path.startsWith(p))
-
-  // error.status 400/401 = Supabase confirma que no hay sesión válida → expulsar.
-  // Cualquier otro error (timeout, red, cold-start del servidor de Auth) es transitorio:
-  // no expulsamos a un usuario con sesión válida solo porque la comprobación falló a
-  // tiempo. Las rutas API ya vuelven a autenticar server-side (getSessionUser) antes
-  // de servir ningún dato, así que la protección real no depende de este redirect.
-  const sessionConfirmedMissing = !user && (!error || error.status === 400 || error.status === 401)
-
-  if (isProtected && sessionConfirmedMissing) {
-    const loginUrl = request.nextUrl.clone()
-    loginUrl.pathname = '/'
-    return NextResponse.redirect(loginUrl)
+  if (pathname === '/api' || pathname.startsWith('/api/')) {
+    return NextResponse.json(
+      { error: MENSAJE_MUDANZA },
+      { status: 410, headers: { 'Cache-Control': 'no-store' } },
+    )
   }
 
-  return supabaseResponse
+  // El token es el primer segmento tras /s/ (tal cual llega, sin decodificar).
+  const token = pathname.match(/^\/s\/([^/]+)/)?.[1]
+  if (token) return redirigir(`${CONTROLL_URL}/s/${token}${search}`)
+
+  if (pathname === '/alumno' || pathname.startsWith('/alumno/')) {
+    return redirigir(`${CONTROLL_URL}/alumno`)
+  }
+
+  return redirigir(`${CONTROLL_URL}/`)
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/|favicon\\.ico|manifest\\.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 }
